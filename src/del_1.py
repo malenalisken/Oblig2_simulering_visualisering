@@ -1,6 +1,8 @@
 import numpy as np
 from mayavi import mlab
-from constants import g
+
+g = 9.81
+
 
 def grid(Lx, Ly, Nx, Ny):
     x = np.linspace(-Lx/2, Lx/2, Nx)
@@ -16,7 +18,7 @@ def initial_function(X, Y, hD, hS, R):
 def plot_instance(X, Y, h, timestamp, filename = None):
     mlab.figure(bgcolor=(1, 1, 1), fgcolor=(0,0,0), size = (500, 300))
 
-    s = mlab.surf(X, Y, h, colormap="Blues", warp_scale=6)
+    s = mlab.surf(X, Y, h, colormap="Blues", warp_scale=5)
 
     # custom colormap: light blue (low h) -> dark blue (high h)
     light = np.array([173, 216, 230])
@@ -147,18 +149,26 @@ if __name__ == '__main__':
     Lx, Ly , Nx, Ny = [100, 100, 401, 401]
     X, Y = grid(Lx, Ly, Nx, Ny)
     h0, u0, v0 = initial_function(X, Y, hD=10, hS=1, R=10)
-    plot_instance(X, Y, h0, timestamp= 0)
+    #plot_instance(X, Y, h0, timestamp= 0)
 
     Q0 = np.array([h0, u0, v0])
     dx, dy = [Lx/(Nx-1), Ly/(Ny-1)]
-    save_times = np.linspace(0,5,5)
+    save_times = np.linspace(0,20,4)
     T = save_times[-1]
-    ts, hs = lax_f_simulation(Q0, dx, dy, T, save_times = save_times)
+    '''ts, hs = lax_f_simulation(Q0, dx, dy, T, save_times = save_times)
 
     for i in range(len(ts)):
         plot_instance(X, Y, hs[i], timestamp= ts[i])
+    '''
+    #1c) kontroll av numerisk løsning:
+    h0 = np.ones_like(X)
+    u0 = np.ones_like(X)
+    v0 = np.zeros_like(X)
+    Q0 = np.array([h0, u0, v0])
+    ts, hs = lax_f_simulation(Q0, dx, dy, T, save_times= save_times)
+    print('The absolute maximum diviation between t0 and T is :',np.max(np.abs(hs[-1] - h0)))
 
-    mlab.show()
+    #mlab.show()
     
 
     
