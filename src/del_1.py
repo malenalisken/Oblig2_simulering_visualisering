@@ -1,5 +1,6 @@
 import numpy as np
 from mayavi import mlab
+import matplotlib.pyplot as plt
 
 g = 9.81
 
@@ -9,11 +10,11 @@ def grid(Lx, Ly, Nx, Ny):
     y = np.linspace(-Ly/2, Ly/2, Ny)
     return np.meshgrid(x, y, indexing = "ij")
 
-def initial_function(X, Y, hD, hS, R):
+def initial_Q(X, Y, hD, hS, R):
     h0 = np.where(np.sqrt(X**2 + Y**2) < R, hD, hS)
     u0 = np.zeros_like(h0)
     v0 = np.zeros_like(h0)
-    return h0, u0, v0
+    return np.array([h0, u0, v0])
 
 def plot_instance(X, Y, h, timestamp, filename = None):
     mlab.figure(bgcolor=(1, 1, 1), fgcolor=(0,0,0), size = (500, 300))
@@ -147,27 +148,58 @@ def lax_f_simulation(Q0, dx, dy, T, save_times, safety = 0.95):
 
 if __name__ == '__main__':
     Lx, Ly , Nx, Ny = [100, 100, 401, 401]
+    hD, hS, R = [10, 1, 10]
     X, Y = grid(Lx, Ly, Nx, Ny)
-    h0, u0, v0 = initial_function(X, Y, hD=10, hS=1, R=10)
+    Q0 = initial_Q(X, Y, hD, hS, R)
     #plot_instance(X, Y, h0, timestamp= 0)
 
-    Q0 = np.array([h0, u0, v0])
     dx, dy = [Lx/(Nx-1), Ly/(Ny-1)]
     save_times = np.linspace(0,20,4)
     T = save_times[-1]
-    '''ts, hs = lax_f_simulation(Q0, dx, dy, T, save_times = save_times)
+    ts, hs = lax_f_simulation(Q0, dx, dy, T, save_times = save_times)
 
-    for i in range(len(ts)):
-        plot_instance(X, Y, hs[i], timestamp= ts[i])
-    '''
-    #1c) kontroll av numerisk løsning:
+    #for i in range(len(ts)):
+    #    plot_instance(X, Y, hs[i], timestamp= ts[i])
+    
+    # 1c) periodic boundry conditions should maintain total water volume
+    V = np.array([np.sum(h) * dx * dy for h in hs])
+    print('Volumn :', V)
+    print('Relative change in volume:', (V - V[0]) / V[0])
+
+    # 1c) check that finer grid does not improve solution significantly
+    h_grid_variation = []
+    for N in [201, 401, 801]:
+        X,Y = grid(Lx, Ly, N, N)
+        dx, dy = [Lx/(N-1), Ly/(N-1)]
+        Q0= initial_Q(X, Y, hD, hS, R)
+
+        ts, hs = lax_f_simulation(Q0, dx, dy, T = 5, save_times= [5])
+        h_end = hs[0]
+        
+        j = np.argmin(np.abs(Y[0, :])) 
+        x_line = X[:, j]
+        h_line = h_end[:, j]
+
+        plt.plot(x_line, h_line, label=f'N = {N}')
+
+    plt.xlabel('x [m]')
+    plt.ylabel('h [m]')
+    plt.title('Cross-section at y = 0, t = 5 s')
+    plt.grid(alpha = 0.3)
+    plt.legend()
+    plt.show()  
+
+
+
+    # 1c) constant initial conditions should preserve waterdepth over time
     h0 = np.ones_like(X)
     u0 = np.ones_like(X)
     v0 = np.zeros_like(X)
     Q0 = np.array([h0, u0, v0])
     ts, hs = lax_f_simulation(Q0, dx, dy, T, save_times= save_times)
-    print('The absolute maximum diviation between t0 and T is :',np.max(np.abs(hs[-1] - h0)))
+    print('The absolute maximum diviation between t0 and T is :', np.max(np.abs(hs[-1] - h0)))
 
+    
     #mlab.show()
     
 
