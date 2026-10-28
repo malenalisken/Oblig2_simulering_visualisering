@@ -17,10 +17,9 @@ def G(Q):
     return np.array([h*v, h*u*v, h*v**2 + 0.5 * g * h**2])
 
 def lf_step(Q, dt, dx, dy ):
-    FQ = np.zeros_like(Q)
-    GQ= np. zeros_like(Q)
-    F[:,0] = F(Q)
-    G[:,0] = G(Q)
+    
+    FQ= F(Q)
+    GQ =G(Q)
     Qn = Q.copy()
     Qn[:,1:-1, 1:-1] = (0.25 * (Q[:, 2:, 1:-1] + Q[:, :-2, 1:-1] + Q[:, 1:-1, 2:] + Q[:, 1:-1, :-2])
         - dt/(2*dx) * (FQ[:, 2:, 1:-1] - FQ[:, :-2, 1:-1])
@@ -28,3 +27,4 @@ def lf_step(Q, dt, dx, dy ):
     )
     # TODO: randbetingelser for Qn[:, 0, :], Qn[:, -1, :], Qn[:, :, 0], Qn[:, :, -1]
     return Qn
+
