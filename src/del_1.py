@@ -17,6 +17,19 @@ def plot(X, Y, h, filename = None):
 
     s = mlab.surf(X, Y, h, colormap="Blues", warp_scale=1)
 
+    # custom colormap: light blue (low h) -> dark blue (high h)
+    light = np.array([173, 216, 230])
+    dark = np.array([8, 48, 107])
+    t_lut = np.linspace(0, 1, 256)[:, None]
+    rgb = (1 - t_lut) * light + t_lut * dark
+    lut = np.hstack([rgb, 255 * np.ones((256, 1))]).astype(np.uint8)
+    s.module_manager.scalar_lut_manager.lut.table = lut
+
+    # softer lighting so the surface colors match the colorbar in the saved png
+    s.actor.property.ambient = 0.6
+    s.actor.property.diffuse = 0.5
+    s.actor.property.specular = 0.0
+
     ax = mlab.axes(s, xlabel="x [m]", ylabel="y [m]", zlabel="", nb_labels = 3)
     ax.axes.y_axis_visibility = False
     ax.axes.label_format = "%.0f"
@@ -44,4 +57,16 @@ def plot(X, Y, h, filename = None):
 if __name__ == '__main__':
     X, Y = grid(Lx=100, Ly=100, Nx=401, Ny=401)
     h0, u0, v0 = initial_function(X, Y, hD=10, hS=1, R=10)
+<<<<<<< Updated upstream
     plot(X, Y, h0)
+=======
+    Q0 = np.array([h0, u0, v0])
+    dx, dy = 0.25, 0.25
+    dt = 0.4 * dx / np.sqrt(g * 10)
+    lax_f_simulation(Q0, dx, dy, dt, T =1 )
+
+    plot(X, Y, h0, filename = 'figures/plot_initial_condition.png')
+
+
+
+>>>>>>> Stashed changes
