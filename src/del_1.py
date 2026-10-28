@@ -6,31 +6,25 @@ g = 9.81
 def F(Q):
     h, hu, hv = Q
     u = hu/h
-    v = hv/v
-    F = np.zeros(len(Q))
-    F[0] = h*u
-    F[1] = h*u**2 + 0.5 * g * h**2
-    F[2] = h*u*v
-    return F
+    v = hv/h
+    return np.array([h*u, h*u**2 + 0.5*g*h**2, h*u*v])
+
 
 def G(Q):
     h, hu, hv = Q
     u = hu/h
-    v = hv/v
-    G = np.zeros(len(Q))
-    G[0] = h*v
-    G[1] = h*u*v
-    G[2] = h*v**2 + 0.5 * g * h**2
-    return G
+    v = hv/h
+    return np.array([h*v, h*u*v, h*v**2 + 0.5 * g * h**2])
 
-def lax_friedrichs(Q0, dt, dx, dy ):
-
-    Q = np.ndarray(Q0.size, n+2)
-    F = np.zeros_like(Q)
-    G= np. zeros_like(Q)
-    Q[:,0] = Q0
-    F[:,0] = F(Q0)
-    G[:,0] = G(Q0)
-
-    for i in range(1, n+2):
-        Q[:,i] = 1/4 = 
+def lf_step(Q, dt, dx, dy ):
+    FQ = np.zeros_like(Q)
+    GQ= np. zeros_like(Q)
+    F[:,0] = F(Q)
+    G[:,0] = G(Q)
+    Qn = Q.copy()
+    Qn[:,1:-1, 1:-1] = (0.25 * (Q[:, 2:, 1:-1] + Q[:, :-2, 1:-1] + Q[:, 1:-1, 2:] + Q[:, 1:-1, :-2])
+        - dt/(2*dx) * (FQ[:, 2:, 1:-1] - FQ[:, :-2, 1:-1])
+        - dt/(2*dy) * (GQ[:, 1:-1, 2:] - GQ[:, 1:-1, :-2])
+    )
+    # TODO: randbetingelser for Qn[:, 0, :], Qn[:, -1, :], Qn[:, :, 0], Qn[:, :, -1]
+    return Qn
