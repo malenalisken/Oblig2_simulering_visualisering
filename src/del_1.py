@@ -23,7 +23,7 @@ def G(Q):
     G[2] = h*v**2 + 0.5 * g * h**2
     return G
 
-def lax_friedrichs(Q0,  ):
+def lax_friedrichs(Q0, dt, dx, dy ):
 
     Q = np.ndarray(Q0.size, n+2)
     F = np.zeros_like(Q)
@@ -33,4 +33,4 @@ def lax_friedrichs(Q0,  ):
     G[:,0] = G(Q0)
 
     for i in range(1, n+2):
-        Q[:,i] = 
+        Q[:,i] = 1/4 = 
