@@ -1,5 +1,6 @@
 import numpy as np
 from mayavi import mlab
+from constants import g
 
 def grid(Lx, Ly, Nx, Ny):
     x = np.linspace(-Lx/2, Lx/2, Nx)
@@ -12,10 +13,10 @@ def initial_function(X, Y, hD, hS, R):
     v0 = np.zeros_like(h0)
     return h0, u0, v0
 
-def plot(X, Y, h, filename = None):
+def plot_instance(X, Y, h, timestamp, filename = None):
     mlab.figure(bgcolor=(1, 1, 1), fgcolor=(0,0,0), size = (500, 300))
 
-    s = mlab.surf(X, Y, h, colormap="Blues", warp_scale=1)
+    s = mlab.surf(X, Y, h, colormap="Blues", warp_scale=6)
 
     # custom colormap: light blue (low h) -> dark blue (high h)
     light = np.array([173, 216, 230])
@@ -40,7 +41,7 @@ def plot(X, Y, h, filename = None):
     cb.scalar_bar_representation.position2 = [0.08, 0.7]
 
     mlab.view(azimuth=45, elevation= 60, distance=220, focalpoint=(0, 0, 3))
-    t = mlab.title('$h(x,y)$ at initial condition $h_0$', size=0.3, height=0.8)
+    t = mlab.title(f'System at timepoint t = {timestamp}', size=0.3, height=0.9)
 
     font = 'times'
     for prop in (ax.title_text_property, ax.label_text_property,
@@ -50,10 +51,7 @@ def plot(X, Y, h, filename = None):
     
     if filename != None:
         mlab.savefig(filename)
-    mlab.show()
 
-
-g = 9.81
 
 
 def F(Q):
@@ -69,7 +67,7 @@ def G(Q):
     v = hv/h
     return np.array([h*v, h*u*v, h*v**2 + 0.5 * g * h**2])
 
-def lf_step(Q, dt, dx, dy ):
+def lf_step(Q, dt, dx, dy):
     """
     one lax-Freidrich step, inner nodes.
     """
@@ -99,34 +97,71 @@ def lf_step(Q, dt, dx, dy):
             - dt/(2*dy) * (jp(GQ) - jm(GQ)))
     return Qn
 
-def lax_f_simulation(Q0, dx, dy, dt,T):
+def stable_timestep(Q, dx, dy, safety = 0.95):
+    h, hu, hv = Q
+    u, v = hu/h, hv/h
+    c = np.sqrt(g*h)
+    dt_x = dx / (2 * np.max(np.abs(u) + c))
+    dt_y = dy / (2 * np.max(np.abs(v) + c))
+    return safety * min(dt_x, dt_y)
+
+
+def lax_f_simulation(Q0, dx, dy, T, save_times, safety = 0.95):
     """
-    simulates hight of water using las friedrich using set dt. 
-    retursn height of water
+    Simulates height of water using las friedrich with dynamic dt.
+    Returns arrays of timesteps and waterheights for grid
     """
-    #TODO look into if we need to  return Q values 
-    #TODO Look into if dt should be dynamic 
-    Q = Q0.copy() # Q is updating to new value for every timestep
-    n = int(T/dt) # number of inner nodes
-    hs = [Q[0].copy()] #hs will be array of hight of water in grid, with appendend values
-    n = int(T/dt)
-    for i in range (1, n+2):
-        Q = lf_step(Q,dt,dx,dy)
-        hs.append(Q[0].copy())
-    return hs
+
+    Q = Q0         
+    t = 0.0
+
+    ts, hs, = [], []
+
+    save_times = sorted(save_times)
+    next_save = 0               #index of next save
+    if save_times[next_save] == 0:
+        next_save += 1
+        ts.append(0.0)
+        hs.append(Q0[0].copy())   
+
+    while t < T:
+        dt = stable_timestep(Q, dx, dy, safety = safety)
+        dt = min(dt, T-t)            #so it doesnt step past T
+        dt = min(dt, save_times[next_save] - t)      #not past wanted timestamp
+
+        Q = lf_step(Q, dt, dx, dy)
+        t += dt
+
+        if np.isclose(t, save_times[next_save]):
+            t = save_times[next_save]
+            ts.append(t)
+            hs.append(Q[0].copy())
+            next_save += 1
+
+    return np.array(ts), np.array(hs)
     
 
     
 
 if __name__ == '__main__':
-    X, Y = grid(Lx=100, Ly=100, Nx=401, Ny=401)
+    Lx, Ly , Nx, Ny = [100, 100, 401, 401]
+    X, Y = grid(Lx, Ly, Nx, Ny)
     h0, u0, v0 = initial_function(X, Y, hD=10, hS=1, R=10)
-    Q0 = np.array([h0, u0, v0])
-    dx, dy = 0.25, 0.25
-    dt = 0.4 * dx / np.sqrt(g * 10)
-    lax_f_simulation(Q0, dx, dy, dt, T =1 )
+    plot_instance(X, Y, h0, timestamp= 0)
 
-    #plot(X, Y, h0)
+    Q0 = np.array([h0, u0, v0])
+    dx, dy = [Lx/(Nx-1), Ly/(Ny-1)]
+    save_times = np.linspace(0,5,5)
+    T = save_times[-1]
+    ts, hs = lax_f_simulation(Q0, dx, dy, T, save_times = save_times)
+
+    for i in range(len(ts)):
+        plot_instance(X, Y, hs[i], timestamp= ts[i])
+
+    mlab.show()
+    
+
+    
 
 
 
