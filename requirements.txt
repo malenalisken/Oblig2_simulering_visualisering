@@ -1,0 +1,20 @@
+# MAMO3200 Prosjekt 2 – Shallow water equations and disease spread
+# Install with:  pip install -r requirements.txt
+# Python version: 3.12 (see README)
+
+# Numerics: Lax–Friedrichs scheme (arrays), ODE models for disease spread (solve_ivp)
+numpy>=1.26
+scipy>=1.11
+
+# 2D plots, quiver animation of the velocity field, ODE/agent plots
+matplotlib>=3.8
+
+# 3D visualization and animation of h(t; x, y) and eta (named in the assignment)
+mayavi>=4.8.2
+vtk>=9.3
+PyQt5>=5.15
+configobj  # used by Mayavi's settings, sometimes not pulled in automatically
+
+# Saving animations as video (.mp4) – bundles an ffmpeg binary
+imageio>=2.34
+imageio-ffmpeg>=0.5
