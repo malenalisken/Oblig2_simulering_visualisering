@@ -167,7 +167,6 @@ if __name__ == '__main__':
     print('Relative change in volume:', (V - V[0]) / V[0])
 
     # 1c) check that finer grid does not improve solution significantly
-    h_grid_variation = []
     for N in [201, 401, 801]:
         X,Y = grid(Lx, Ly, N, N)
         dx, dy = [Lx/(N-1), Ly/(N-1)]
@@ -175,7 +174,7 @@ if __name__ == '__main__':
 
         ts, hs = lax_f_simulation(Q0, dx, dy, T = 5, save_times= [5])
         h_end = hs[0]
-        
+
         j = np.argmin(np.abs(Y[0, :])) 
         x_line = X[:, j]
         h_line = h_end[:, j]
@@ -188,7 +187,6 @@ if __name__ == '__main__':
     plt.grid(alpha = 0.3)
     plt.legend()
     plt.show()  
-
 
 
     # 1c) constant initial conditions should preserve waterdepth over time
