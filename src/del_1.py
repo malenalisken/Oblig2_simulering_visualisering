@@ -19,10 +19,6 @@ def plot(X, Y, h):
     mlab.colorbar(s, title='h[m]')
     mlab.show()
 
-if __name__ == '__main__':
-    X, Y = grid(Lx=100, Ly=100, Nx=201, Ny=201)
-    h0, u0, v0 = initial_function(X, Y, hD=10, hS=1, R=10)
-    plot(X, Y, h0)
 
 g = 9.81
 
@@ -41,6 +37,9 @@ def G(Q):
     return np.array([h*v, h*u*v, h*v**2 + 0.5 * g * h**2])
 
 def lf_step(Q, dt, dx, dy ):
+    """
+    one lax-Freidrich step, inner nodes.
+    """
     
     FQ= F(Q)
     GQ =G(Q)
@@ -49,6 +48,52 @@ def lf_step(Q, dt, dx, dy ):
         - dt/(2*dx) * (FQ[:, 2:, 1:-1] - FQ[:, :-2, 1:-1])
         - dt/(2*dy) * (GQ[:, 1:-1, 2:] - GQ[:, 1:-1, :-2])
     )
-    # TODO: randbetingelser for Qn[:, 0, :], Qn[:, -1, :], Qn[:, :, 0], Qn[:, :, -1]
+    
     return Qn
+
+def lf_step(Q, dt, dx, dy):
+    """
+    one Lax–Friedrichs-step with periodiske BC (via np.roll).
+    """
+    FQ = F(Q)
+    GQ = G(Q)
+    ip = lambda A: np.roll(A, -1, axis=1)   # i+1
+    im = lambda A: np.roll(A,  1, axis=1)   # i-1
+    jp = lambda A: np.roll(A, -1, axis=2)   # j+1
+    jm = lambda A: np.roll(A,  1, axis=2)   # j-1
+    Qn =(0.25 * (ip(Q) + im(Q) + jp(Q) + jm(Q))
+            - dt/(2*dx) * (ip(FQ) - im(FQ))
+            - dt/(2*dy) * (jp(GQ) - jm(GQ)))
+    return Qn
+
+def lax_f_simulation(Q0, dx, dy, dt,T):
+    """
+    simulates hight of water using las friedrich using set dt. 
+    retursn height of water
+    """
+    #TODO look into if we need to  return Q values 
+    #TODO Look into if dt should be dynamic 
+    Q = Q0.copy() # Q is updating to new value for every timestep
+    n = int(T/dt) # number of inner nodes
+    hs = [Q[0].copy()] #hs will be array of hight of water in grid, with appendend values
+    n = int(T/dt)
+    for i in range (1, n+2):
+        Q = lf_step(Q,dt,dx,dy)
+        hs.append(Q[0].copy())
+    return hs
+    
+
+    
+
+if __name__ == '__main__':
+    X, Y = grid(Lx=100, Ly=100, Nx=201, Ny=201)
+    h0, u0, v0 = initial_function(X, Y, hD=10, hS=1, R=10)
+    Q0 = np.array([h0, u0, v0])
+    dx, dy = 0.25, 0.25
+    dt = 0.4 * dx / np.sqrt(g * 10)
+    lax_f_simulation(Q0, dx, dy, dt, T =1 )
+
+    #plot(X, Y, h0)
+
+
 
