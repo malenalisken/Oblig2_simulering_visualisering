@@ -16,11 +16,11 @@ def initial_Q(X, Y, hD, hS, R):
     v0 = np.zeros_like(h0)
     return np.array([h0, u0, v0])
 
-def plot_instance(X, Y, h, timestamp, filename = None):
-    mlab.figure(bgcolor=(1, 1, 1), fgcolor=(0,0,0), size = (500, 300))
-
-    s = mlab.surf(X, Y, h, colormap="Blues", warp_scale=5)
-
+def style_surface(s):
+    """
+    Function for custom styles for plots and animation
+    of shallow water simulation
+    """
     # custom colormap: light blue (low h) -> dark blue (high h)
     light = np.array([173, 216, 230])
     dark = np.array([8, 48, 107])
@@ -33,6 +33,14 @@ def plot_instance(X, Y, h, timestamp, filename = None):
     s.actor.property.ambient = 0.6
     s.actor.property.diffuse = 0.5
     s.actor.property.specular = 0.0
+
+
+def plot_instance(X, Y, h, timestamp, filename = None):
+    mlab.figure(bgcolor=(1, 1, 1), fgcolor=(0,0,0), size = (500, 300))
+
+    s = mlab.surf(X, Y, h, colormap="Blues", warp_scale=5)
+    style_surface(s)
+    
 
     ax = mlab.axes(s, xlabel="x [m]", ylabel="y [m]", zlabel="", nb_labels = 3)
     ax.axes.y_axis_visibility = False
@@ -111,7 +119,7 @@ def stable_timestep(Q, dx, dy, safety = 0.95):
 
 def lax_f_simulation(Q0, dx, dy, T, save_times, safety = 0.95):
     """
-    Simulates height of water using las friedrich with dynamic dt.
+    Simulates height of water using lax friedrich with dynamic dt.
     Returns arrays of timesteps and waterheights for grid
     """
 
@@ -151,7 +159,9 @@ if __name__ == '__main__':
     hD, hS, R = [10, 1, 10]
     X, Y = grid(Lx, Ly, Nx, Ny)
     Q0 = initial_Q(X, Y, hD, hS, R)
-    #plot_instance(X, Y, h0, timestamp= 0)
+    #plot_instance(X, Y, Q0[0], timestamp= 0)
+    
+
 
     dx, dy = [Lx/(Nx-1), Ly/(Ny-1)]
     save_times = np.linspace(0,20,4)
@@ -167,6 +177,7 @@ if __name__ == '__main__':
     print('Relative change in volume:', (V - V[0]) / V[0])
 
     # 1c) check that finer grid does not improve solution significantly
+    
     for N in [201, 401, 801]:
         X,Y = grid(Lx, Ly, N, N)
         dx, dy = [Lx/(N-1), Ly/(N-1)]
@@ -187,7 +198,7 @@ if __name__ == '__main__':
     plt.grid(alpha = 0.3)
     plt.legend()
     plt.show()  
-
+    
 
     # 1c) constant initial conditions should preserve waterdepth over time
     h0 = np.ones_like(X)
@@ -202,6 +213,5 @@ if __name__ == '__main__':
     
 
     
-
 
 
