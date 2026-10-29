@@ -1,6 +1,7 @@
 import numpy as np
 from mayavi import mlab
 import matplotlib.pyplot as plt
+import os
 
 g = 9.81
 
@@ -63,17 +64,19 @@ def plot_instance(X, Y, h, timestamp, filename = None):
     if filename != None:
         mlab.savefig(filename)
 
-def s_w_animation(X, Y, ts, hs, delay=50):
+def s_w_animation(X, Y, ts, hs, delay=50, frame_dir = None):
     """
     animates water height h
 
     ts: array of time points, 
     hs: array of h-grids, shape (len(ts), Nx, Ny)
     delay: time between frames in millisecon
+    frame_dir : if not none, each frame is saved in frame_dir_folder
     """
 
     #same style settings as 3d plot
-    mlab.figure(bgcolor=(1, 1, 1), fgcolor=(0,0,0), size = (500, 300))
+    mlab.figure(bgcolor=(1, 1, 1), fgcolor=(0,0,0), size=(1280, 720))
+
     s = mlab.surf(X, Y, hs[0], colormap="Blues", warp_scale=5,
               vmin=hs.min(), vmax=hs.max())
     style_surface(s)
@@ -83,16 +86,24 @@ def s_w_animation(X, Y, ts, hs, delay=50):
     mlab.colorbar(s, title="h [m]", orientation="vertical")
     mlab.view(azimuth=45, elevation=60, distance=220, focalpoint=(0, 0, 3))
     title = mlab.title(f"t = {ts[0]:.2f} s", size=0.3, height=0.9)
+    if frame_dir is not None:
+        os.makedirs(frame_dir, exist_ok=True)
+
 
     @mlab.animate(delay=delay)
     def anim():
+        first_loop = True                   #needed to stop fig save after after first loop
         while True:                         # loop until window is closed
-            for t, h in zip(ts, hs):
+            for i, (t, h) in enumerate(zip(ts, hs)):
                 s.mlab_source.scalars = h   # update height, X and Y stay the same
                 title.text = f"t = {t:.2f} s"
-                yield                       # let Mayavi draw this frame
+                if frame_dir is not None and first_loop:
+                    mlab.savefig(os.path.join(frame_dir, f"frame_{i:04d}.png"))
+                yield                       # draw this frame
+            first_loop = False              # stops save fig 
 
-    anim()
+
+    return anim()
 
 def F(Q):
     h, hu, hv = Q
@@ -124,7 +135,7 @@ def lf_step(Q, dt, dx, dy):
 
 def lf_step(Q, dt, dx, dy):
     """
-    one Lax–Friedrichs-step with periodiske BC (via np.roll).
+    one Lax–Friedrichs-step with periodic BC (via np.roll).
     """
     FQ = F(Q)
     GQ = G(Q)
@@ -241,11 +252,11 @@ if __name__ == '__main__':
     # 1d) animation
     X, Y = grid(Lx, Ly, Nx, Ny)
     Q0 = initial_Q(X, Y, hD, hS, R)
-    anim_times = np.linspace(0, 20, 201)
+    anim_times = np.linspace(0, 20, 601)
     ts_anim, hs_anim = lax_f_simulation(Q0, dx, dy, anim_times[-1], save_times=anim_times)
 
-    #a= s_w_animation(X, Y, ts_anim, hs_anim)
-    #mlab.show()
+    a = s_w_animation(X, Y, ts_anim, hs_anim, frame_dir="figures/animation_SW/frames")
+    mlab.show()
     
 
     
