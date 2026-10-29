@@ -286,22 +286,22 @@ if __name__ == '__main__':
     
     X, Y = grid(Lx, Ly, Nx, Ny)
     Q0 = initial_Q(X, Y, hD, hS, R)
-    anim_times = np.linspace(0, 20, 601)
 
     #animation of shallow water, uncomment to run
-
+    """
+    anim_times = np.linspace(0, 20, 601)
     ts_anim, hs_anim = lax_f_simulation(Q0, dx, dy, anim_times[-1], save_times=anim_times)
     a = s_w_animation(X, Y, ts_anim, hs_anim, frame_dir="figures/animation_SW/frames")
     mlab.show()
-
+    """
     #animation of quierplot, uncomment to run
-    
-    #quiver_times = np.linspace(0, 20, 201)
-    #ts_q, hs_q, us_q, vs_q = lax_f_simulation(Q0, dx, dy, anim_times[-1], save_times=quiver_times, return_velocity= True)
-    #filename= 'figures/animation_SW/quiver.mp4' #if we want to save file again, set filename= filename in quiver animation
-    #fig_q, a_q = quiver_animation(X, Y, ts_q, us_q, vs_q)
-    #plt.show()
-    
+    """
+    quiver_times = np.linspace(0, 20, 201)
+    ts_q, hs_q, us_q, vs_q = lax_f_simulation(Q0, dx, dy, anim_times[-1], save_times=quiver_times, return_velocity= True)
+    filename= 'figures/animation_SW/quiver.mp4' #if we want to save file again, set filename= filename in quiver animation
+    fig_q, a_q = quiver_animation(X, Y, ts_q, us_q, vs_q)
+    plt.show()
+    """
     
 
     
