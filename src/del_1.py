@@ -105,6 +105,9 @@ def s_w_animation(X, Y, ts, hs, delay=50, frame_dir = None):
 
     return anim()
 
+def quiver_animation(X, Y ):
+    pass
+
 def F(Q):
     h, hu, hv = Q
     u = hu/h
@@ -118,20 +121,7 @@ def G(Q):
     v = hv/h
     return np.array([h*v, h*u*v, h*v**2 + 0.5 * g * h**2])
 
-def lf_step(Q, dt, dx, dy):
-    """
-    one lax-Freidrich step, inner nodes.
-    """
-    
-    FQ= F(Q)
-    GQ =G(Q)
-    Qn = Q.copy()
-    Qn[:,1:-1, 1:-1] = (0.25 * (Q[:, 2:, 1:-1] + Q[:, :-2, 1:-1] + Q[:, 1:-1, 2:] + Q[:, 1:-1, :-2])
-        - dt/(2*dx) * (FQ[:, 2:, 1:-1] - FQ[:, :-2, 1:-1])
-        - dt/(2*dy) * (GQ[:, 1:-1, 2:] - GQ[:, 1:-1, :-2])
-    )
-    
-    return Qn
+
 
 def lf_step(Q, dt, dx, dy):
     """
@@ -160,20 +150,25 @@ def stable_timestep(Q, dx, dy, safety = 0.95):
 def lax_f_simulation(Q0, dx, dy, T, save_times, safety = 0.95):
     """
     Simulates height of water using lax friedrich with dynamic dt.
-    Returns arrays of timesteps and waterheights for grid
+    Returns arrays of timesteps and waterheights for grid, and velocity
     """
 
     Q = Q0         
     t = 0.0
 
-    ts, hs, = [], []
+    ts, hs, us, vs = [], [], [], []
+
+    def save(t, Q):
+        ts.append(t)
+        hs.append(Q[0].copy()) 
+        us.append(Q[1] / Q[0])
+        vs.append(Q[2] / Q[0])
 
     save_times = sorted(save_times)
     next_save = 0               #index of next save
     if save_times[next_save] == 0:
         next_save += 1
-        ts.append(0.0)
-        hs.append(Q0[0].copy())   
+        save(0.0, Q0)  
 
     while t < T:
         dt = stable_timestep(Q, dx, dy, safety = safety)
@@ -185,11 +180,11 @@ def lax_f_simulation(Q0, dx, dy, T, save_times, safety = 0.95):
 
         if np.isclose(t, save_times[next_save]):
             t = save_times[next_save]
-            ts.append(t)
-            hs.append(Q[0].copy())
+            save(t, Q)
+            
             next_save += 1
 
-    return np.array(ts), np.array(hs)
+    return np.array(ts), np.array(hs), np.array(us), np.array(vs)
     
 def finer_grid_check():
      
@@ -198,7 +193,7 @@ def finer_grid_check():
             dx, dy = [Lx/(N-1), Ly/(N-1)]
             Q0= initial_Q(X, Y, hD, hS, R)
     
-            ts, hs = lax_f_simulation(Q0, dx, dy, T = 5, save_times= [5])
+            ts, hs, us, vs = lax_f_simulation(Q0, dx, dy, T = 5, save_times= [5])
             h_end = hs[0]
     
             j = np.argmin(np.abs(Y[0, :])) 
@@ -228,7 +223,7 @@ if __name__ == '__main__':
     dx, dy = [Lx/(Nx-1), Ly/(Ny-1)]
     save_times = np.linspace(0,20,4)
     T = save_times[-1]
-    ts, hs = lax_f_simulation(Q0, dx, dy, T, save_times = save_times)
+    ts, hs, us, vs = lax_f_simulation(Q0, dx, dy, T, save_times = save_times)
 
     #for i in range(len(ts)):
     #    plot_instance(X, Y, hs[i], timestamp= ts[i])
@@ -246,16 +241,16 @@ if __name__ == '__main__':
     u0 = np.ones_like(X)
     v0 = np.zeros_like(X)
     Q0 = np.array([h0, u0, v0])
-    ts, hs = lax_f_simulation(Q0, dx, dy, T, save_times= save_times)
+    ts, hs, us, vs = lax_f_simulation(Q0, dx, dy, T, save_times= save_times)
     print('The absolute maximum diviation between t0 and T is :', np.max(np.abs(hs[-1] - h0)))
 
-    # 1d) animation
+    # 1d) animation of 
     X, Y = grid(Lx, Ly, Nx, Ny)
     Q0 = initial_Q(X, Y, hD, hS, R)
     anim_times = np.linspace(0, 20, 601)
-    ts_anim, hs_anim = lax_f_simulation(Q0, dx, dy, anim_times[-1], save_times=anim_times)
+    ts_anim, hs_anim, us, vs = lax_f_simulation(Q0, dx, dy, anim_times[-1], save_times=anim_times)
 
-    a = s_w_animation(X, Y, ts_anim, hs_anim, frame_dir="figures/animation_SW/frames")
+    a = s_w_animation(X, Y, ts_anim, hs_anim)
     mlab.show()
     
 
