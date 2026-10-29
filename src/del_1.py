@@ -1,8 +1,10 @@
 import numpy as np
 from mayavi import mlab
 import matplotlib.pyplot as plt
+import imageio_ffmpeg
+from matplotlib.animation import FuncAnimation, FFMpegWriter
 import os
-
+plt.rcParams["animation.ffmpeg_path"] = imageio_ffmpeg.get_ffmpeg_exe()
 g = 9.81
 
 
@@ -82,6 +84,7 @@ def s_w_animation(X, Y, ts, hs, delay=50, frame_dir = None):
     style_surface(s)
 
     ax = mlab.axes(s, xlabel="x [m]", ylabel="y [m]", zlabel="", nb_labels=3)
+    ax.axes.y_axis_visibility = False # for some reason mayavi has swapped y and z axis, let stay to remove z axis.
     ax.axes.label_format = "%.0f"
     mlab.colorbar(s, title="h [m]", orientation="vertical")
     mlab.view(azimuth=45, elevation=60, distance=220, focalpoint=(0, 0, 3))
@@ -105,8 +108,40 @@ def s_w_animation(X, Y, ts, hs, delay=50, frame_dir = None):
 
     return anim()
 
-def quiver_animation(X, Y ):
-    pass
+def quiver_animation(X, Y, ts, us, vs, step =20, interval = 50, filename = None, fps = 10, bitrate = 200):
+    """
+    2d quiver animation of velocity u and v
+    step : determines wivh nth step vil be plotted with arrow
+    time  between frames
+    """
+    Xs, Ys= X[::step,::step], Y[::step, ::step]
+    speeds = np.sqrt(us**2 + vs**2)
+    vmax = speeds.max()
+    fig, ax = plt.subplots(figsize = (7,6))
+    q = ax.quiver(Xs, Ys, us[0][::step,::step], vs[0][::step, ::step],
+                  speeds[0][::step, ::step], cmap="viridis", clim=(0, vmax),
+                  scale=vmax * 12, scale_units="width", width = 0.005)
+    fig.colorbar(q, ax=ax, label=r"speed $\sqrt{u^2 + v^2}$ [m/s]")
+    ax.set_xlabel("x [m]")
+    ax.set_ylabel("y [m]")
+    ax.set_aspect("equal")
+    title = ax.set_title(f"t = {ts[0]:.2f} s")
+
+    def update(k):
+        q.set_UVC(us[k][::step, ::step], vs[k][::step, ::step], speeds[k][::step, ::step])
+        title.set_text(f"t = {ts[k]:.2f} s")
+        return q, title
+
+    anim = FuncAnimation(fig, update, frames=len(ts), interval=interval)
+
+     
+
+    if filename is not None:
+        anim.save(filename, writer=FFMpegWriter(fps=fps, bitrate=bitrate))
+        print(f"Saved {filename}: {os.path.getsize(filename) / 1e6:.1f} MB")
+
+    
+    return fig, anim
 
 def F(Q):
     h, hu, hv = Q
@@ -147,10 +182,10 @@ def stable_timestep(Q, dx, dy, safety = 0.95):
     return safety * min(dt_x, dt_y)
 
 
-def lax_f_simulation(Q0, dx, dy, T, save_times, safety = 0.95):
+def lax_f_simulation(Q0, dx, dy, T, save_times, safety = 0.95, return_velocity = False):
     """
     Simulates height of water using lax friedrich with dynamic dt.
-    Returns arrays of timesteps and waterheights for grid, and velocity
+    Returns arrays of timesteps and waterheights for grid, and velocity if return_velocity = True
     """
 
     Q = Q0         
@@ -161,8 +196,9 @@ def lax_f_simulation(Q0, dx, dy, T, save_times, safety = 0.95):
     def save(t, Q):
         ts.append(t)
         hs.append(Q[0].copy()) 
-        us.append(Q[1] / Q[0])
-        vs.append(Q[2] / Q[0])
+        if return_velocity:
+            us.append(Q[1] / Q[0])
+            vs.append(Q[2] / Q[0])
 
     save_times = sorted(save_times)
     next_save = 0               #index of next save
@@ -183,9 +219,9 @@ def lax_f_simulation(Q0, dx, dy, T, save_times, safety = 0.95):
             save(t, Q)
             
             next_save += 1
-
-    return np.array(ts), np.array(hs), np.array(us), np.array(vs)
-    
+    if return_velocity:
+        return np.array(ts), np.array(hs), np.array(us), np.array(vs)
+    return np.array(ts), np.array(hs)
 def finer_grid_check():
      
         for N in [201, 401, 801]:
@@ -223,35 +259,49 @@ if __name__ == '__main__':
     dx, dy = [Lx/(Nx-1), Ly/(Ny-1)]
     save_times = np.linspace(0,20,4)
     T = save_times[-1]
-    ts, hs, us, vs = lax_f_simulation(Q0, dx, dy, T, save_times = save_times)
+    ts, hs = lax_f_simulation(Q0, dx, dy, T, save_times = save_times)
 
     #for i in range(len(ts)):
     #    plot_instance(X, Y, hs[i], timestamp= ts[i])
     
-    # 1c) periodic boundry conditions should maintain total water volume
+    # 1c) periodic boundry conditions should maintain total water volume, uncomment to run
+    """
     V = np.array([np.sum(h) * dx * dy for h in hs])
     print('Volumn :', V)
     print('Relative change in volume:', (V - V[0]) / V[0])
-
+    """
     # 1c) check that finer grid does not improve solution significantly, uncomment to run
     #finer_grid_check()
 
-    # 1c) constant initial conditions should preserve waterdepth over time
+    # 1c) constant initial conditions should preserve waterdepth over time, uncomment to run
+    """
     h0 = np.ones_like(X)
     u0 = np.ones_like(X)
     v0 = np.zeros_like(X)
     Q0 = np.array([h0, u0, v0])
-    ts, hs, us, vs = lax_f_simulation(Q0, dx, dy, T, save_times= save_times)
+    ts, hs = lax_f_simulation(Q0, dx, dy, T, save_times= save_times)
     print('The absolute maximum diviation between t0 and T is :', np.max(np.abs(hs[-1] - h0)))
-
-    # 1d) animation of 
+    """
+    # 1d) animations
+    
     X, Y = grid(Lx, Ly, Nx, Ny)
     Q0 = initial_Q(X, Y, hD, hS, R)
     anim_times = np.linspace(0, 20, 601)
-    ts_anim, hs_anim, us, vs = lax_f_simulation(Q0, dx, dy, anim_times[-1], save_times=anim_times)
 
-    a = s_w_animation(X, Y, ts_anim, hs_anim)
+    #animation of shallow water, uncomment to run
+
+    ts_anim, hs_anim = lax_f_simulation(Q0, dx, dy, anim_times[-1], save_times=anim_times)
+    a = s_w_animation(X, Y, ts_anim, hs_anim, frame_dir="figures/animation_SW/frames")
     mlab.show()
+
+    #animation of quierplot, uncomment to run
+    
+    #quiver_times = np.linspace(0, 20, 201)
+    #ts_q, hs_q, us_q, vs_q = lax_f_simulation(Q0, dx, dy, anim_times[-1], save_times=quiver_times, return_velocity= True)
+    #filename= 'figures/animation_SW/quiver.mp4' #if we want to save file again, set filename= filename in quiver animation
+    #fig_q, a_q = quiver_animation(X, Y, ts_q, us_q, vs_q)
+    #plt.show()
+    
     
 
     
