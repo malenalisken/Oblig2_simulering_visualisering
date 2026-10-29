@@ -63,7 +63,36 @@ def plot_instance(X, Y, h, timestamp, filename = None):
     if filename != None:
         mlab.savefig(filename)
 
+def s_w_animation(X, Y, ts, hs, delay=50):
+    """
+    animates water height h
 
+    ts: array of time points, 
+    hs: array of h-grids, shape (len(ts), Nx, Ny)
+    delay: time between frames in millisecon
+    """
+
+    #same style settings as 3d plot
+    mlab.figure(bgcolor=(1, 1, 1), fgcolor=(0,0,0), size = (500, 300))
+    s = mlab.surf(X, Y, hs[0], colormap="Blues", warp_scale=5,
+              vmin=hs.min(), vmax=hs.max())
+    style_surface(s)
+
+    ax = mlab.axes(s, xlabel="x [m]", ylabel="y [m]", zlabel="", nb_labels=3)
+    ax.axes.label_format = "%.0f"
+    mlab.colorbar(s, title="h [m]", orientation="vertical")
+    mlab.view(azimuth=45, elevation=60, distance=220, focalpoint=(0, 0, 3))
+    title = mlab.title(f"t = {ts[0]:.2f} s", size=0.3, height=0.9)
+
+    @mlab.animate(delay=delay)
+    def anim():
+        while True:                         # loop until window is closed
+            for t, h in zip(ts, hs):
+                s.mlab_source.scalars = h   # update height, X and Y stay the same
+                title.text = f"t = {t:.2f} s"
+                yield                       # let Mayavi draw this frame
+
+    anim()
 
 def F(Q):
     h, hu, hv = Q
@@ -177,7 +206,7 @@ if __name__ == '__main__':
     print('Relative change in volume:', (V - V[0]) / V[0])
 
     # 1c) check that finer grid does not improve solution significantly
-    
+    """
     for N in [201, 401, 801]:
         X,Y = grid(Lx, Ly, N, N)
         dx, dy = [Lx/(N-1), Ly/(N-1)]
@@ -198,7 +227,7 @@ if __name__ == '__main__':
     plt.grid(alpha = 0.3)
     plt.legend()
     plt.show()  
-    
+    """
 
     # 1c) constant initial conditions should preserve waterdepth over time
     h0 = np.ones_like(X)
@@ -208,8 +237,14 @@ if __name__ == '__main__':
     ts, hs = lax_f_simulation(Q0, dx, dy, T, save_times= save_times)
     print('The absolute maximum diviation between t0 and T is :', np.max(np.abs(hs[-1] - h0)))
 
-    
-    #mlab.show()
+    # 1d) animation
+    X, Y = grid(Lx, Ly, Nx, Ny)
+    Q0 = initial_Q(X, Y, hD, hS, R)
+    anim_times = np.linspace(0, 20, 201)
+    ts_anim, hs_anim = lax_f_simulation(Q0, dx, dy, anim_times[-1], save_times=anim_times)
+
+    a= s_w_animation(X, Y, ts_anim, hs_anim)
+    mlab.show()
     
 
     
