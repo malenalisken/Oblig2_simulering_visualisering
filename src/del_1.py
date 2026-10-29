@@ -180,7 +180,29 @@ def lax_f_simulation(Q0, dx, dy, T, save_times, safety = 0.95):
 
     return np.array(ts), np.array(hs)
     
-
+def finer_grid_check():
+     
+        for N in [201, 401, 801]:
+            X,Y = grid(Lx, Ly, N, N)
+            dx, dy = [Lx/(N-1), Ly/(N-1)]
+            Q0= initial_Q(X, Y, hD, hS, R)
+    
+            ts, hs = lax_f_simulation(Q0, dx, dy, T = 5, save_times= [5])
+            h_end = hs[0]
+    
+            j = np.argmin(np.abs(Y[0, :])) 
+            x_line = X[:, j]
+            h_line = h_end[:, j]
+    
+            plt.plot(x_line, h_line, label=f'N = {N}')
+    
+        plt.xlabel('x [m]')
+        plt.ylabel('h [m]')
+        plt.title('Cross-section at y = 0, t = 5 s')
+        plt.grid(alpha = 0.3)
+        plt.legend()
+        plt.show()  
+        
     
 
 if __name__ == '__main__':
@@ -205,29 +227,8 @@ if __name__ == '__main__':
     print('Volumn :', V)
     print('Relative change in volume:', (V - V[0]) / V[0])
 
-    # 1c) check that finer grid does not improve solution significantly
-    """
-    for N in [201, 401, 801]:
-        X,Y = grid(Lx, Ly, N, N)
-        dx, dy = [Lx/(N-1), Ly/(N-1)]
-        Q0= initial_Q(X, Y, hD, hS, R)
-
-        ts, hs = lax_f_simulation(Q0, dx, dy, T = 5, save_times= [5])
-        h_end = hs[0]
-
-        j = np.argmin(np.abs(Y[0, :])) 
-        x_line = X[:, j]
-        h_line = h_end[:, j]
-
-        plt.plot(x_line, h_line, label=f'N = {N}')
-
-    plt.xlabel('x [m]')
-    plt.ylabel('h [m]')
-    plt.title('Cross-section at y = 0, t = 5 s')
-    plt.grid(alpha = 0.3)
-    plt.legend()
-    plt.show()  
-    """
+    # 1c) check that finer grid does not improve solution significantly, uncomment to run
+    #finer_grid_check()
 
     # 1c) constant initial conditions should preserve waterdepth over time
     h0 = np.ones_like(X)
@@ -243,8 +244,8 @@ if __name__ == '__main__':
     anim_times = np.linspace(0, 20, 201)
     ts_anim, hs_anim = lax_f_simulation(Q0, dx, dy, anim_times[-1], save_times=anim_times)
 
-    a= s_w_animation(X, Y, ts_anim, hs_anim)
-    mlab.show()
+    #a= s_w_animation(X, Y, ts_anim, hs_anim)
+    #mlab.show()
     
 
     
