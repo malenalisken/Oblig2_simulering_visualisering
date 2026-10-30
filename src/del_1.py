@@ -70,7 +70,7 @@ def s_w_animation(X, Y, ts, hs, delay=50, frame_dir = None):
     """
     animates water height h
 
-    ts: array of time points, 
+    ts: array of time points,
     hs: array of h-grids, shape (len(ts), Nx, Ny)
     delay: time between frames in millisecon
     frame_dir : if not none, each frame is saved in frame_dir_folder
@@ -103,7 +103,7 @@ def s_w_animation(X, Y, ts, hs, delay=50, frame_dir = None):
                 if frame_dir is not None and first_loop:
                     mlab.savefig(os.path.join(frame_dir, f"frame_{i:04d}.png"))
                 yield                       # draw this frame
-            first_loop = False              # stops save fig 
+            first_loop = False              # stops save fig
 
 
     return anim()
@@ -173,6 +173,15 @@ def lf_step(Q, dt, dx, dy):
             - dt/(2*dy) * (jp(GQ) - jm(GQ)))
     return Qn
 
+def dirichlet_bc(Qn):
+    '''Sets the momentum to 0 along the edges and sets egde height equal to inner neighbour'''
+    Qn[1:, [0, -1], :] = 0        #left and right edge
+    Qn[1:, :, [0, -1]] = 0        #top and bottom edge
+
+    Qn[0, [0, -1], :] = Qn[0, [1, -2], :]
+    Qn[0, :, [0, -1]] = Qn[0, :, [1, -2]]  
+    return Qn
+
 def stable_timestep(Q, dx, dy, safety = 0.95):
     h, hu, hv = Q
     u, v = hu/h, hv/h
@@ -182,7 +191,7 @@ def stable_timestep(Q, dx, dy, safety = 0.95):
     return safety * min(dt_x, dt_y)
 
 
-def lax_f_simulation(Q0, dx, dy, T, save_times, safety = 0.95, return_velocity = False):
+def lax_f_simulation(Q0, dx, dy, T, save_times,  safety = 0.95, return_velocity = False, boundry_condition = None):
     """
     Simulates height of water using lax friedrich with dynamic dt.
     Returns arrays of timesteps and waterheights for grid, and velocity if return_velocity = True
@@ -212,6 +221,8 @@ def lax_f_simulation(Q0, dx, dy, T, save_times, safety = 0.95, return_velocity =
         dt = min(dt, save_times[next_save] - t)      #not past wanted timestamp
 
         Q = lf_step(Q, dt, dx, dy)
+        if boundry_condition != None:
+            Q = boundry_condition(Q)
         t += dt
 
         if np.isclose(t, save_times[next_save]):
@@ -222,28 +233,30 @@ def lax_f_simulation(Q0, dx, dy, T, save_times, safety = 0.95, return_velocity =
     if return_velocity:
         return np.array(ts), np.array(hs), np.array(us), np.array(vs)
     return np.array(ts), np.array(hs)
+
+
 def finer_grid_check():
-     
-        for N in [201, 401, 801]:
-            X,Y = grid(Lx, Ly, N, N)
-            dx, dy = [Lx/(N-1), Ly/(N-1)]
-            Q0= initial_Q(X, Y, hD, hS, R)
-    
-            ts, hs, us, vs = lax_f_simulation(Q0, dx, dy, T = 5, save_times= [5])
-            h_end = hs[0]
-    
-            j = np.argmin(np.abs(Y[0, :])) 
-            x_line = X[:, j]
-            h_line = h_end[:, j]
-    
-            plt.plot(x_line, h_line, label=f'N = {N}')
-    
-        plt.xlabel('x [m]')
-        plt.ylabel('h [m]')
-        plt.title('Cross-section at y = 0, t = 5 s')
-        plt.grid(alpha = 0.3)
-        plt.legend()
-        plt.show()  
+    '''plots graph of cross section for varying distance between nodes in grid'''
+    for N in [201, 401, 801]:
+        X,Y = grid(Lx, Ly, N, N)
+        dx, dy = [Lx/(N-1), Ly/(N-1)]
+        Q0= initial_Q(X, Y, hD, hS, R)
+
+        ts, hs, = lax_f_simulation(Q0, dx, dy, T = 5, save_times= [5])
+        h_end = hs[0]
+
+        j = np.argmin(np.abs(Y[0, :])) 
+        x_line = X[:, j]
+        h_line = h_end[:, j]
+
+        plt.plot(x_line, h_line, label=f'N = {N}')
+
+    plt.xlabel('x [m]')
+    plt.ylabel('h [m]')
+    plt.title('Cross-section at y = 0, t = 5 s')
+    plt.grid(alpha = 0.3)
+    plt.legend()
+    plt.show()  
         
     
 
@@ -265,11 +278,11 @@ if __name__ == '__main__':
     #    plot_instance(X, Y, hs[i], timestamp= ts[i])
     
     # 1c) periodic boundry conditions should maintain total water volume, uncomment to run
-    """
+    '''
     V = np.array([np.sum(h) * dx * dy for h in hs])
     print('Volumn :', V)
     print('Relative change in volume:', (V - V[0]) / V[0])
-    """
+    '''
     # 1c) check that finer grid does not improve solution significantly, uncomment to run
     #finer_grid_check()
 
@@ -287,21 +300,29 @@ if __name__ == '__main__':
     X, Y = grid(Lx, Ly, Nx, Ny)
     Q0 = initial_Q(X, Y, hD, hS, R)
 
-    #animation of shallow water, uncomment to run
-    """
     anim_times = np.linspace(0, 20, 601)
+    #animation of shallow water with periodic boundry conditions, uncomment to run
+    '''
     ts_anim, hs_anim = lax_f_simulation(Q0, dx, dy, anim_times[-1], save_times=anim_times)
     a = s_w_animation(X, Y, ts_anim, hs_anim, frame_dir="figures/animation_SW/frames")
     mlab.show()
-    """
+    '''
+
+    #animation of shallow water with dirichlet boundry condition, uncomment to run
+    '''
+    ts_anim, hs_anim = lax_f_simulation(Q0, dx, dy, anim_times[-1], save_times=anim_times, boundry_condition=dirichlet_bc)
+    a = s_w_animation(X, Y, ts_anim, hs_anim, frame_dir="figures/animation_SW/frames", delay= 10)
+    mlab.show()
+    '''
+
     #animation of quierplot, uncomment to run
-    """
+    '''
     quiver_times = np.linspace(0, 20, 201)
     ts_q, hs_q, us_q, vs_q = lax_f_simulation(Q0, dx, dy, anim_times[-1], save_times=quiver_times, return_velocity= True)
     filename= 'figures/animation_SW/quiver.mp4' #if we want to save file again, set filename= filename in quiver animation
     fig_q, a_q = quiver_animation(X, Y, ts_q, us_q, vs_q)
     plt.show()
-    """
+    '''
     
 
     
