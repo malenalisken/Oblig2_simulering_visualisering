@@ -76,7 +76,7 @@ def plot_instance(X, Y, h, timestamp, filename = None):
     if filename != None:
         mlab.savefig(filename)
 
-def s_w_animation(X, Y, ts, hs, delay=50, frame_dir = None, warp_scale = 5, time_unit= "s", time_scale =1, length_unit = "m", length_scale = 1, vmin = None,vmax = None):
+def s_w_animation(X, Y, ts, hs, delay=50, frame_dir = None, custom_style = True, colormap = "Blues", warp_scale = 5, time_unit= "s", time_scale =1, length_unit = "m", length_scale = 1, vmin = None,vmax = None, cbar_title="h [m]"):
     """
     animates water height h
 
@@ -91,9 +91,9 @@ def s_w_animation(X, Y, ts, hs, delay=50, frame_dir = None, warp_scale = 5, time
     vmin = hs.min() if vmin is None else vmin
     vmax = hs.max() if vmax is None else vmax
     
-    s = mlab.surf(X, Y, hs[0], colormap="Blues", warp_scale= warp_scale,
+    s = mlab.surf(X, Y, hs[0], colormap=colormap, warp_scale= warp_scale,
               vmin=vmin, vmax=vmax)
-    style_surface(s)
+    if custom_style: style_surface(s)
 
     ax = mlab.axes(s, xlabel=f"x [{length_unit}]", ylabel=f"y [{length_unit}]", zlabel="", nb_labels=3,
                    ranges = [X.min()/length_scale, X.max()/length_scale,
@@ -101,8 +101,15 @@ def s_w_animation(X, Y, ts, hs, delay=50, frame_dir = None, warp_scale = 5, time
                            hs.min(), hs.max()])
     ax.axes.y_axis_visibility = False # for some reason mayavi has swapped y and z axis, let stay to remove z axis.
     ax.axes.label_format = "%.0f"
-    mlab.colorbar(s, title="h [m]", orientation="vertical")
+    ax.axes.corner_offset = 0.05        #so ax labels do not collide
+    
+    cb = mlab.colorbar(s, title=cbar_title, orientation = 'vertical')
+    cb.scalar_bar_representation.position = [0.85, 0.15]
+    cb.scalar_bar_representation.position2 = [0.08, 0.7]
     mlab.view(azimuth=45, elevation=60, focalpoint=(0, 0, 3)) # have removed distance=220 parameter
+    az, el, dist, fp = mlab.view()          # using mayavi auto sistance and 
+    mlab.view(distance=1.3 * dist)          # zooms out 30 %
+   
     title = mlab.title(f"t = {ts[0]/time_scale:.2f} {time_unit}", size=0.3, height=0.9)
     if frame_dir is not None:
         os.makedirs(frame_dir, exist_ok=True)
@@ -385,19 +392,23 @@ if __name__ == '__main__':
     plt.show()
     '''
     # 1 f) simulation on larger scale with new initialfunc and new lenghts
-    # uncomment to run
+   
     
-    Lx, Ly, Nx, Ny = [3_000_000, 3_000_000, 301, 301]
+    Lx, Ly, Nx, Ny = [3_000_000, 3_000_000, 401, 401]
     dx, dy = [Lx/(Nx-1), Ly/(Ny-1)]
    
     X, Y = grid(Lx, Ly, Nx, Ny)
     H = 100 
     Q0 = initial_Q_large_scale(X,Y, Lx,Ly, H = H)
     T = 30 * 3600 #30 hours
-       
+
+    # animation, uncomment to run
+    """   
     anim_times = np.linspace(0, T, 301)
-    frame_dir="figures/animation_SW/frames_1f"
+    frame_dir="figures/animation_SW/frames"
     ts_anim, hs_anim = lax_f_simulation(Q0, dx, dy, anim_times[-1], save_times=anim_times, boundry_condition=neumann_bc)
     eta_anim = hs_anim - H
-    a = s_w_animation(X, Y, ts_anim, eta_anim, delay= 10, warp_scale=1, time_unit = "h", time_scale=3600, length_unit= "km", length_scale= 1000, vmin = -0.15, vmax = 0.15)
+    a = s_w_animation(X, Y, ts_anim, eta_anim, delay= 10, frame_dir = None, custom_style=False, colormap="seismic", warp_scale =1, time_unit = "h",time_scale=3600, length_unit= "km", length_scale= 1000, vmin= -0.15, vmax =0.15, cbar_title= "eta[m]")
+    a = s_w_animation(X, Y, ts_anim, eta_anim, delay= 10, frame_dir = None, time_unit = "h",time_scale=3600, length_unit= "km", length_scale= 1000, vmin= -0.15, vmax =0.15, cbar_title= "eta[m]")
     mlab.show()
+    """
