@@ -19,6 +19,16 @@ def initial_Q(X, Y, hD, hS, R):
     v0 = np.zeros_like(h0)
     return np.array([h0, u0, v0])
 
+def initial_Q_large_scale(X, Y, Lx, Ly,H = 100, A =1, sigma = 50_000):
+    x_c = Lx/2.7
+    y_c = Ly/4
+    
+    h0 = A*np.exp(-((X-x_c)**2 + (Y-y_c)**2)/(2*sigma**2)) + H
+    u0 = np.zeros_like(h0)
+    v0 = np.zeros_like(h0)
+    return np.array([h0, u0, v0])
+
+
 def style_surface(s):
     """
     Function for custom styles for plots and animation
@@ -369,7 +379,22 @@ if __name__ == '__main__':
     fig_q, a_q = quiver_animation(X, Y, ts_q, us_q, vs_q)
     plt.show()
     '''
+    # 1 f) simulation on larger scale with new initialfunc and new lenghts
+    # uncomment to run
+
+    Lx, Ly, Nx, Ny = [3_000_000, 3_000_000, 101, 101]
+    dx, dy = [Lx/(Nx-1), Ly/(Ny-1)]
+
+    X, Y = grid(Lx, Ly, Nx, Ny)
+    Q0 = initial_Q_large_scale(X,Y, Lx,Ly)
+    T = 30 * 3600 #30 hours
     
+    anim_times = np.linspace(0, T, 301)
+    frame_dir="figures/animation_SW/frames_1f"
+    ts_anim, hs_anim = lax_f_simulation(Q0, dx, dy, anim_times[-1], save_times=anim_times, boundry_condition=neumann_bc)
+    a = s_w_animation(X, Y, ts_anim, hs_anim, delay= 10)
+    mlab.show()
+
 
     
 
