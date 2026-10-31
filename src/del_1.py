@@ -76,7 +76,7 @@ def plot_instance(X, Y, h, timestamp, filename = None):
     if filename != None:
         mlab.savefig(filename)
 
-def s_w_animation(X, Y, ts, hs, delay=50, frame_dir = None):
+def s_w_animation(X, Y, ts, hs, delay=50, frame_dir = None, warp_scale = 5):
     """
     animates water height h
 
@@ -89,7 +89,7 @@ def s_w_animation(X, Y, ts, hs, delay=50, frame_dir = None):
     #same style settings as 3d plot
     mlab.figure(bgcolor=(1, 1, 1), fgcolor=(0,0,0), size=(1280, 720))
 
-    s = mlab.surf(X, Y, hs[0], colormap="Blues", warp_scale=5,
+    s = mlab.surf(X, Y, hs[0], colormap="Blues", warp_scale= warp_scale,
               vmin=hs.min(), vmax=hs.max())
     style_surface(s)
 
@@ -381,21 +381,4 @@ if __name__ == '__main__':
     '''
     # 1 f) simulation on larger scale with new initialfunc and new lenghts
     # uncomment to run
-
-    Lx, Ly, Nx, Ny = [3_000_000, 3_000_000, 101, 101]
-    dx, dy = [Lx/(Nx-1), Ly/(Ny-1)]
-
-    X, Y = grid(Lx, Ly, Nx, Ny)
-    Q0 = initial_Q_large_scale(X,Y, Lx,Ly)
-    T = 30 * 3600 #30 hours
-    
-    anim_times = np.linspace(0, T, 301)
-    frame_dir="figures/animation_SW/frames_1f"
-    ts_anim, hs_anim = lax_f_simulation(Q0, dx, dy, anim_times[-1], save_times=anim_times, boundry_condition=neumann_bc)
-    a = s_w_animation(X, Y, ts_anim, hs_anim, delay= 10)
-    mlab.show()
-
-
-    
-
 
