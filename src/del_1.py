@@ -173,14 +173,21 @@ def lf_step(Q, dt, dx, dy):
             - dt/(2*dy) * (jp(GQ) - jm(GQ)))
     return Qn
 
-def dirichlet_bc(Qn):
+def dirichlet_bc(Q):
     '''Sets the momentum to 0 along the edges and sets egde height equal to inner neighbour'''
-    Qn[1:, [0, -1], :] = 0        #left and right edge
-    Qn[1:, :, [0, -1]] = 0        #top and bottom edge
+    Q[1:, [0, -1], :] = 0        #left and right edge
+    Q[1:, :, [0, -1]] = 0        #top and bottom edge
 
-    Qn[0, [0, -1], :] = Qn[0, [1, -2], :]
-    Qn[0, :, [0, -1]] = Qn[0, :, [1, -2]]  
-    return Qn
+    Q[0, [0, -1], :] = Q[0, [1, -2], :]
+    Q[0, :, [0, -1]] = Q[0, :, [1, -2]]  
+    return Q
+
+def neumann_bc(Q):
+    '''Sets momentum and height equal to the neighbour inner node'''
+    Q[:, [0, -1], :] = Q[:, [1, -2], :]
+    Q[:, :, [0, -1]] = Q[:, :, [1, -2]] 
+    return Q
+
 
 def stable_timestep(Q, dx, dy, safety = 0.95):
     h, hu, hv = Q
@@ -311,6 +318,13 @@ if __name__ == '__main__':
     #animation of shallow water with dirichlet boundry condition, uncomment to run
     '''
     ts_anim, hs_anim = lax_f_simulation(Q0, dx, dy, anim_times[-1], save_times=anim_times, boundry_condition=dirichlet_bc)
+    a = s_w_animation(X, Y, ts_anim, hs_anim, frame_dir="figures/animation_SW/frames", delay= 10)
+    mlab.show()
+    '''
+
+    #animation of shallow water with neumann boundry condition, uncomment to run
+    '''
+    ts_anim, hs_anim = lax_f_simulation(Q0, dx, dy, anim_times[-1], save_times=anim_times, boundry_condition=neumann_bc)
     a = s_w_animation(X, Y, ts_anim, hs_anim, frame_dir="figures/animation_SW/frames", delay= 10)
     mlab.show()
     '''
