@@ -76,7 +76,7 @@ def plot_instance(X, Y, h, timestamp, filename = None):
     if filename != None:
         mlab.savefig(filename)
 
-def s_w_animation(X, Y, ts, hs, delay=50, frame_dir = None, warp_scale = 5):
+def s_w_animation(X, Y, ts, hs, delay=50, frame_dir = None, warp_scale = 5, time_unit= "s", time_scale =1, length_unit = "m", length_scale = 1, vmin = None,vmax = None):
     """
     animates water height h
 
@@ -88,17 +88,22 @@ def s_w_animation(X, Y, ts, hs, delay=50, frame_dir = None, warp_scale = 5):
 
     #same style settings as 3d plot
     mlab.figure(bgcolor=(1, 1, 1), fgcolor=(0,0,0), size=(1280, 720))
-
+    vmin = hs.min() if vmin is None else vmin
+    vmax = hs.max() if vmax is None else vmax
+    
     s = mlab.surf(X, Y, hs[0], colormap="Blues", warp_scale= warp_scale,
-              vmin=hs.min(), vmax=hs.max())
+              vmin=vmin, vmax=vmax)
     style_surface(s)
 
-    ax = mlab.axes(s, xlabel="x [m]", ylabel="y [m]", zlabel="", nb_labels=3)
+    ax = mlab.axes(s, xlabel=f"x [{length_unit}]", ylabel=f"y [{length_unit}]", zlabel="", nb_labels=3,
+                   ranges = [X.min()/length_scale, X.max()/length_scale,
+                           Y.min()/length_scale, Y.max()/length_scale,
+                           hs.min(), hs.max()])
     ax.axes.y_axis_visibility = False # for some reason mayavi has swapped y and z axis, let stay to remove z axis.
     ax.axes.label_format = "%.0f"
     mlab.colorbar(s, title="h [m]", orientation="vertical")
-    mlab.view(azimuth=45, elevation=60, distance=220, focalpoint=(0, 0, 3))
-    title = mlab.title(f"t = {ts[0]:.2f} s", size=0.3, height=0.9)
+    mlab.view(azimuth=45, elevation=60, focalpoint=(0, 0, 3)) # have removed distance=220 parameter
+    title = mlab.title(f"t = {ts[0]/time_scale:.2f} {time_unit}", size=0.3, height=0.9)
     if frame_dir is not None:
         os.makedirs(frame_dir, exist_ok=True)
 
@@ -109,7 +114,7 @@ def s_w_animation(X, Y, ts, hs, delay=50, frame_dir = None, warp_scale = 5):
         while True:                         # loop until window is closed
             for i, (t, h) in enumerate(zip(ts, hs)):
                 s.mlab_source.scalars = h   # update height, X and Y stay the same
-                title.text = f"t = {t:.2f} s"
+                title.text = f"t = {t/time_scale:.2f} {time_unit}"
                 if frame_dir is not None and first_loop:
                     mlab.savefig(os.path.join(frame_dir, f"frame_{i:04d}.png"))
                 yield                       # draw this frame
@@ -307,7 +312,7 @@ if __name__ == '__main__':
     dx, dy = [Lx/(Nx-1), Ly/(Ny-1)]
     save_times = np.linspace(0,20,4)
     T = save_times[-1]
-    ts, hs = lax_f_simulation(Q0, dx, dy, T, save_times = save_times)
+    #ts, hs = lax_f_simulation(Q0, dx, dy, T, save_times = save_times)
 
     #for i in range(len(ts)):
     #    plot_instance(X, Y, hs[i], timestamp= ts[i])
@@ -381,4 +386,18 @@ if __name__ == '__main__':
     '''
     # 1 f) simulation on larger scale with new initialfunc and new lenghts
     # uncomment to run
-
+    
+    Lx, Ly, Nx, Ny = [3_000_000, 3_000_000, 301, 301]
+    dx, dy = [Lx/(Nx-1), Ly/(Ny-1)]
+   
+    X, Y = grid(Lx, Ly, Nx, Ny)
+    H = 100 
+    Q0 = initial_Q_large_scale(X,Y, Lx,Ly, H = H)
+    T = 30 * 3600 #30 hours
+       
+    anim_times = np.linspace(0, T, 301)
+    frame_dir="figures/animation_SW/frames_1f"
+    ts_anim, hs_anim = lax_f_simulation(Q0, dx, dy, anim_times[-1], save_times=anim_times, boundry_condition=neumann_bc)
+    eta_anim = hs_anim - H
+    a = s_w_animation(X, Y, ts_anim, eta_anim, delay= 10, warp_scale=1, time_unit = "h", time_scale=3600, length_unit= "km", length_scale= 1000, vmin = -0.15, vmax = 0.15)
+    mlab.show()
