@@ -130,28 +130,28 @@ def s_w_animation(X, Y, ts, hs, delay=50, frame_dir = None, custom_style = True,
 
     return anim()
 
-def quiver_animation(X, Y, ts, us, vs, step =20, interval = 50, filename = None, fps = 10, bitrate = 200):
+def quiver_animation(X, Y, ts, us, vs, step =20, interval = 50, filename = None, fps = 10, bitrate = 200, time_unit = "s", time_scale = 1, length_unit = "m", length_scale = 1, vmax = None):
     """
     2d quiver animation of velocity u and v
     step : determines wivh nth step vil be plotted with arrow
     time  between frames
     """
-    Xs, Ys= X[::step,::step], Y[::step, ::step]
+    Xs, Ys= X[::step,::step]/length_scale, Y[::step, ::step]/length_scale
     speeds = np.sqrt(us**2 + vs**2)
-    vmax = speeds.max()
+    vmax = speeds.max() if vmax is None else vmax
     fig, ax = plt.subplots(figsize = (7,6))
     q = ax.quiver(Xs, Ys, us[0][::step,::step], vs[0][::step, ::step],
                   speeds[0][::step, ::step], cmap="viridis", clim=(0, vmax),
-                  scale=vmax * 12, scale_units="width", width = 0.005)
+                  scale=vmax * 6, scale_units="width", width = 0.005)
     fig.colorbar(q, ax=ax, label=r"speed $\sqrt{u^2 + v^2}$ [m/s]")
-    ax.set_xlabel("x [m]")
-    ax.set_ylabel("y [m]")
+    ax.set_xlabel(f"x [{length_unit}]")
+    ax.set_ylabel(f"y [{length_unit}]")
     ax.set_aspect("equal")
-    title = ax.set_title(f"t = {ts[0]:.2f} s")
+    title = ax.set_title(f"t = {ts[0]/time_scale:.2f} {time_unit}")
 
     def update(k):
         q.set_UVC(us[k][::step, ::step], vs[k][::step, ::step], speeds[k][::step, ::step])
-        title.set_text(f"t = {ts[k]:.2f} s")
+        title.set_text(f"t = {ts[k]/time_scale:.2f} {time_unit}")
         return q, title
 
     anim = FuncAnimation(fig, update, frames=len(ts), interval=interval)
@@ -383,7 +383,7 @@ if __name__ == '__main__':
     mlab.show()
     '''
 
-    #animation of quierplot, uncomment to run
+    #animation of quiverplot, uncomment to run
     '''
     quiver_times = np.linspace(0, 20, 201)
     ts_q, hs_q, us_q, vs_q = lax_f_simulation(Q0, dx, dy, anim_times[-1], save_times=quiver_times, return_velocity= True)
@@ -411,4 +411,14 @@ if __name__ == '__main__':
     a = s_w_animation(X, Y, ts_anim, eta_anim, delay= 10, frame_dir = None, custom_style=False, colormap="seismic", warp_scale =1, time_unit = "h",time_scale=3600, length_unit= "km", length_scale= 1000, vmin= -0.15, vmax =0.15, cbar_title= "eta[m]")
     a = s_w_animation(X, Y, ts_anim, eta_anim, delay= 10, frame_dir = None, time_unit = "h",time_scale=3600, length_unit= "km", length_scale= 1000, vmin= -0.15, vmax =0.15, cbar_title= "eta[m]")
     mlab.show()
+    """
+
+    #quiver animation, uncoment to run
+
+    """
+    quiver_times = np.linspace(0, T, 101)
+    ts_q, hs_q, us_q, vs_q = lax_f_simulation(Q0, dx, dy, quiver_times[-1], save_times=quiver_times, return_velocity= True, boundry_condition=neumann_bc)
+    filename= 'figures/animation_SW/quiver_1f.mp4' #if we want to save file again, set filename= filename in quiver animation
+    fig_q, a_q = quiver_animation(X, Y, ts_q, us_q, vs_q, step = 12, filename= None, time_unit="h", time_scale= 3600, length_unit="km", length_scale= 1000, vmax = 0.08)
+    plt.show()
     """
