@@ -188,6 +188,19 @@ def neumann_bc(Q):
     Q[:, :, [0, -1]] = Q[:, :, [1, -2]] 
     return Q
 
+def slip_cond_bc(Q, dt, dx, dy, no_slip = False):
+    '''Fictionless wall (slip): ghost cells mirror h, 
+        flipped sign of the normal velocity, tangent vel stays the same
+    '''
+    Qp = np.pad(Q, ((0, 0), (1, 1), (1, 1)), mode="edge")       #filling ghost nodes with nearest real values
+    Qp[1, [0, -1], :] *= -1
+    Qp[2, :, [0, -1]] *= -1
+    if no_slip:                    #change coeff for tangial velocity too
+        Qp[2, [0, -1], :] *= -1     
+        Qp[1, :, [0, -1]] *= -1
+    Qp = lf_step(Qp, dt, dx, dy)
+    return Qp[:, 1: -1, 1: -1]
+
 
 def stable_timestep(Q, dx, dy, safety = 0.95):
     h, hu, hv = Q
@@ -198,7 +211,8 @@ def stable_timestep(Q, dx, dy, safety = 0.95):
     return safety * min(dt_x, dt_y)
 
 
-def lax_f_simulation(Q0, dx, dy, T, save_times,  safety = 0.95, return_velocity = False, boundry_condition = None):
+def lax_f_simulation(Q0, dx, dy, T, save_times,  safety = 0.95, return_velocity = False, 
+                     boundry_condition = None, ghost_cells = None, no_slip = False):
     """
     Simulates height of water using lax friedrich with dynamic dt.
     Returns arrays of timesteps and waterheights for grid, and velocity if return_velocity = True
@@ -227,7 +241,11 @@ def lax_f_simulation(Q0, dx, dy, T, save_times,  safety = 0.95, return_velocity 
         dt = min(dt, T-t)            #so it doesnt step past T
         dt = min(dt, save_times[next_save] - t)      #not past wanted timestamp
 
-        Q = lf_step(Q, dt, dx, dy)
+        if ghost_cells == None:
+            Q = lf_step(Q, dt, dx, dy)
+        else: 
+            Q = slip_cond_bc(Q, dt, dx, dy, no_slip)
+
         if boundry_condition != None:
             Q = boundry_condition(Q)
         t += dt
@@ -302,7 +320,7 @@ if __name__ == '__main__':
     ts, hs = lax_f_simulation(Q0, dx, dy, T, save_times= save_times)
     print('The absolute maximum diviation between t0 and T is :', np.max(np.abs(hs[-1] - h0)))
     """
-    # 1d) animations
+    # 1d) animations and 1e) animations with different boundry conditions
     
     X, Y = grid(Lx, Ly, Nx, Ny)
     Q0 = initial_Q(X, Y, hD, hS, R)
@@ -325,6 +343,20 @@ if __name__ == '__main__':
     #animation of shallow water with neumann boundry condition, uncomment to run
     '''
     ts_anim, hs_anim = lax_f_simulation(Q0, dx, dy, anim_times[-1], save_times=anim_times, boundry_condition=neumann_bc)
+    a = s_w_animation(X, Y, ts_anim, hs_anim, frame_dir="figures/animation_SW/frames", delay= 10)
+    mlab.show()
+    '''
+
+    #animation of shallow water with slip wall boundry condition, uncomment to run
+    '''
+    ts_anim, hs_anim = lax_f_simulation(Q0, dx, dy, anim_times[-1], save_times=anim_times, ghost_cells=slip_cond_bc)
+    a = s_w_animation(X, Y, ts_anim, hs_anim, frame_dir="figures/animation_SW/frames", delay= 10)
+    mlab.show()
+    '''
+
+    #animation of shallow water with no-slip wall boundry condition, uncomment to run
+    '''
+    ts_anim, hs_anim = lax_f_simulation(Q0, dx, dy, anim_times[-1], save_times=anim_times, ghost_cells=slip_cond_bc, no_slip= True)
     a = s_w_animation(X, Y, ts_anim, hs_anim, frame_dir="figures/animation_SW/frames", delay= 10)
     mlab.show()
     '''
