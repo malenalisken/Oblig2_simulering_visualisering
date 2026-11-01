@@ -349,39 +349,39 @@ if __name__ == '__main__':
 
     anim_times = np.linspace(0, 20, 601)
     #animation of shallow water with periodic boundry conditions, uncomment to run
-    '''
-    ts_anim, hs_anim = lax_f_simulation(Q0, dx, dy, anim_times[-1], save_times=anim_times)
-    a = s_w_animation(X, Y, ts_anim, hs_anim, frame_dir="figures/animation_SW/frames")
+    """
+    ts_anim, hs_anim = lax_f_simulation(Q0, dx, dy,anim_times[-1], save_times=anim_times)
+    a = s_w_animation(X, Y, ts_anim, hs_anim, delay = 10, frame_dir="figures/animation_SW/frames", warp_scale = 1)
     mlab.show()
-    '''
+    """
 
     #animation of shallow water with dirichlet boundry condition, uncomment to run
-    '''
+    """
     ts_anim, hs_anim = lax_f_simulation(Q0, dx, dy, anim_times[-1], save_times=anim_times, boundry_condition=dirichlet_bc)
-    a = s_w_animation(X, Y, ts_anim, hs_anim, frame_dir="figures/animation_SW/frames", delay= 10)
+    a = s_w_animation(X, Y, ts_anim, hs_anim, frame_dir="figures/animation_SW/frames", delay= 10, warp_scale = 1)
     mlab.show()
-    '''
+    """
 
     #animation of shallow water with neumann boundry condition, uncomment to run
-    '''
+    """
     ts_anim, hs_anim = lax_f_simulation(Q0, dx, dy, anim_times[-1], save_times=anim_times, boundry_condition=neumann_bc)
-    a = s_w_animation(X, Y, ts_anim, hs_anim, frame_dir="figures/animation_SW/frames", delay= 10)
+    a = s_w_animation(X, Y, ts_anim, hs_anim, frame_dir="figures/animation_SW/frames", delay= 10, warp_scale=1)
     mlab.show()
-    '''
+    """
 
     #animation of shallow water with slip wall boundry condition, uncomment to run
-    '''
+    """
     ts_anim, hs_anim = lax_f_simulation(Q0, dx, dy, anim_times[-1], save_times=anim_times, ghost_cells=slip_cond_bc)
-    a = s_w_animation(X, Y, ts_anim, hs_anim, frame_dir="figures/animation_SW/frames", delay= 10)
+    a = s_w_animation(X, Y, ts_anim, hs_anim, frame_dir="figures/animation_SW/frames", delay= 10, warp_scale=1)
     mlab.show()
-    '''
+    """
 
     #animation of shallow water with no-slip wall boundry condition, uncomment to run
-    '''
+    """
     ts_anim, hs_anim = lax_f_simulation(Q0, dx, dy, anim_times[-1], save_times=anim_times, ghost_cells=slip_cond_bc, no_slip= True)
-    a = s_w_animation(X, Y, ts_anim, hs_anim, frame_dir="figures/animation_SW/frames", delay= 10)
+    a = s_w_animation(X, Y, ts_anim, hs_anim, frame_dir="figures/animation_SW/frames", delay= 10, warp_scale = 1)
     mlab.show()
-    '''
+    """
 
     #animation of quiverplot, uncomment to run
     '''
