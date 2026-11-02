@@ -76,7 +76,7 @@ def plot_instance(X, Y, h, timestamp, filename = None):
     if filename != None:
         mlab.savefig(filename)
 
-def s_w_animation(X, Y, ts, hs, delay=50, frame_dir = None, custom_style = True, colormap = "Blues", warp_scale = 5, time_unit= "s", time_scale =1, length_unit = "m", length_scale = 1, vmin = None,vmax = None, cbar_title="h [m]"):
+def s_w_animation(X, Y, ts, hs, delay=50, frame_dir = None, custom_style = True, colormap = "Blues", warp_scale = 5, time_unit= "s", time_scale =1, length_unit = "m", length_scale = 1, vmin = None,vmax = None, cbar_title="h [m]", distance = None):
     """
     animates water height h
 
@@ -84,6 +84,7 @@ def s_w_animation(X, Y, ts, hs, delay=50, frame_dir = None, custom_style = True,
     hs: array of h-grids, shape (len(ts), Nx, Ny)
     delay: time between frames in millisecon
     frame_dir : if not none, each frame is saved in frame_dir_folder
+    distance : camera distance, if None mayavi's auto distance zoomed out 30 % is used
     """
 
     #same style settings as 3d plot
@@ -106,9 +107,12 @@ def s_w_animation(X, Y, ts, hs, delay=50, frame_dir = None, custom_style = True,
     cb = mlab.colorbar(s, title=cbar_title, orientation = 'vertical')
     cb.scalar_bar_representation.position = [0.85, 0.15]
     cb.scalar_bar_representation.position2 = [0.08, 0.7]
-    mlab.view(azimuth=45, elevation=60, focalpoint=(0, 0, 3)) # have removed distance=220 parameter
-    az, el, dist, fp = mlab.view()          # using mayavi auto sistance and 
-    mlab.view(distance=1.3 * dist)          # zooms out 30 %
+    if distance is not None:
+        mlab.view(azimuth=45, elevation=60, distance=distance, focalpoint=(0, 0, 3))
+    else:
+        mlab.view(azimuth=45, elevation=60, focalpoint=(0, 0, 3))
+        az, el, dist, fp = mlab.view()          # using mayavi auto sistance and
+        mlab.view(distance=1.3 * dist)          # zooms out 30 %
    
     title = mlab.title(f"t = {ts[0]/time_scale:.2f} {time_unit}", size=0.3, height=0.9)
     if frame_dir is not None:
@@ -196,18 +200,18 @@ def lf_step(Q, dt, dx, dy):
     return Qn
 
 def dirichlet_bc(Q):
-    '''Sets the momentum to 0 along the edges and sets egde height equal to inner neighbour'''
-    Q[1:, [0, -1], :] = 0        #left and right edge
-    Q[1:, :, [0, -1]] = 0        #top and bottom edge
-
-    Q[0, [0, -1], :] = Q[0, [1, -2], :]
-    Q[0, :, [0, -1]] = Q[0, :, [1, -2]]  
+    '''Sets the momentum to 0 along the edges and sets egde height equal to 1'''
+    Q[1:, [0, -1], :] = 0        # hu and hv on the left and right edges
+    Q[1:, :, [0, -1]] = 0        # hu and hv on the bottom and top edges
+    
+    Q[0, [0, -1], :] = 1         # setting h to 1 because i cannot be 0
+    Q[0, :, [0, -1]] = 1 
     return Q
 
 def neumann_bc(Q):
-    '''Sets momentum and height equal to the neighbour inner node'''
-    Q[:, [0, -1], :] = Q[:, [1, -2], :]
-    Q[:, :, [0, -1]] = Q[:, :, [1, -2]] 
+    '''Sets momentum and height for boundry nodes equal to the neighbouring inner node'''
+    Q[:, [0, -1], :] = Q[:, [1, -2], :] 
+    Q[:, :, [0, -1]] = Q[:, :, [1, -2]]
     return Q
 
 def slip_cond_bc(Q, dt, dx, dy, no_slip = False):
@@ -356,18 +360,18 @@ if __name__ == '__main__':
     """
 
     #animation of shallow water with dirichlet boundry condition, uncomment to run
-    """
+    '''
     ts_anim, hs_anim = lax_f_simulation(Q0, dx, dy, anim_times[-1], save_times=anim_times, boundry_condition=dirichlet_bc)
-    a = s_w_animation(X, Y, ts_anim, hs_anim, frame_dir="figures/animation_SW/frames", delay= 10, warp_scale = 1)
+    a = s_w_animation(X, Y, ts_anim, hs_anim, frame_dir="figures/animation_SW/frames", delay= 10, warp_scale = 5)
     mlab.show()
-    """
+    '''
 
     #animation of shallow water with neumann boundry condition, uncomment to run
-    """
+    '''
     ts_anim, hs_anim = lax_f_simulation(Q0, dx, dy, anim_times[-1], save_times=anim_times, boundry_condition=neumann_bc)
-    a = s_w_animation(X, Y, ts_anim, hs_anim, frame_dir="figures/animation_SW/frames", delay= 10, warp_scale=1)
+    a = s_w_animation(X, Y, ts_anim, hs_anim, frame_dir="figures/animation_SW/frames", delay= 10, warp_scale=5, distance=220)
     mlab.show()
-    """
+    '''
 
     #animation of shallow water with slip wall boundry condition, uncomment to run
     """
@@ -393,7 +397,7 @@ if __name__ == '__main__':
     '''
     # 1 f) simulation on larger scale with new initialfunc and new lenghts
    
-    
+    '''
     Lx, Ly, Nx, Ny = [3_000_000, 3_000_000, 401, 401]
     dx, dy = [Lx/(Nx-1), Ly/(Ny-1)]
    
@@ -401,6 +405,7 @@ if __name__ == '__main__':
     H = 100 
     Q0 = initial_Q_large_scale(X,Y, Lx,Ly, H = H)
     T = 30 * 3600 #30 hours
+    '''
 
     # animation, uncomment to run
     """   
