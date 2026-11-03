@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-
+from matplotlib.ticker import MaxNLocator
 rng = np.random.default_rng(42)
 
 
@@ -11,7 +11,7 @@ gray = "#999999" #recovered
 
 # position and distance funtions
 
-def random_positions(n, margin=0.2, Lx = 12.0, Ly = 8.0):
+def random_positions(n,  Lx , Ly, margin=0.2,):
     """Generate n uniformly distributed points inside the box."""
     x = rng.uniform(margin, Lx - margin, n)
     y = rng.uniform(margin, Ly - margin, n)
@@ -44,28 +44,31 @@ def P_tot_infection(k, lam, dt):
 def P_recovery(gamma, dt):
     return 1-np.exp(-gamma*dt)
 
-def initial_state(N, start_I_n=1, margin=0.2, Lx = 12.0, Ly = 8.0):
-    position = random_positions(N, margin=margin, Lx=Lx, Ly=Ly)
+def initial_state(N, I0, R0, Lx, Ly, margin=0.2):
+    position = random_positions(N, Lx=Lx, Ly=Ly,margin=margin,)
     state = np.zeros(N, dtype = int) # 0 =S, 1 = I, 2 =R
     n_infected = np.zeros(N, dtype= int) #number of how many each agent have infected
     t_infected  = np.full(N, np.nan) #time each agent got infected
     t_recovered = np.full(N, np.nan) # time each agent recover
 
-    for i in range(start_I_n):
+    for i in range(I0):
         state[i] = 1
         t_infected[i] = 0.0
+    for i in range(I0,R0+I0):
+        state[i] = 2
+        t_recovered[i] = 0.0
 
     return position, state, n_infected, t_infected, t_recovered
 
-def inf_step(I, position, state, n_inf, t_inf, t, R, l, dt):
+def inf_step(I, position, state, n_inf, t_inf, t, r_inf, lam, dt):
     S = np.where(state == 0)[0] # gives index of S from position array
     
     
     if len(S) == 0 or len(I) == 0:
         return
-    in_radius = distance(position[S], position[I]) < R**2
+    in_radius = distance(position[S], position[I]) < r_inf**2
     k = in_radius.sum(axis =1) # number of infected
-    P = P_tot_infection(k,l, dt)
+    P = P_tot_infection(k,lam, dt)
     new = rng.random(len(S)) < P
 
     for a in np.where(new)[0]:              
@@ -83,42 +86,54 @@ def rec_step(I, state, t_rec, t, gamma, dt):
         state[I[a]] = 2
         t_rec[I[a]] = t
 
-def simulate(N, T, dt, R, lam, gamma, D, Lx=12.0, Ly=8.0, start_I_n=1):
+def simulate(N, T, dt, r_inf, lam, gamma, D, Lx, Ly, I0, R0):
     step = np.sqrt(2*D*dt)
-    pos, state, n_inf, t_inf, t_rec = initial_state(N, start_I_n, Lx=Lx, Ly=Ly)
+    pos, state, n_inf, t_inf, t_rec = initial_state(N, I0, R0, Lx=Lx, Ly=Ly)
     ts = np.arange(0, T + 0.5*dt, dt)
     sir_history = np.zeros((len(ts), 3), dtype=int)
     for n, t in enumerate(ts):
         pos = update_position(pos, step, N, Lx, Ly)
         I = np.where(state == 1)[0]
-        inf_step(I, pos, state, n_inf, t_inf, t, R, lam, dt)
+        inf_step(I, pos, state, n_inf, t_inf, t, r_inf, lam, dt)
         rec_step(I, state, t_rec, t, gamma, dt)
         sir_history[n] = [(state==0).sum(), (state==1).sum(), (state==2).sum()]
 
     return ts, sir_history, n_inf, t_inf, t_rec
 
-def plot_sir(sir_history, ts):
+def plot_sir(sir_history, ts, filename = None):
     fig, ax = plt.subplots()
     ax.plot(ts, sir_history[:,0],color = blue, label = 'Susceptible')
     ax.plot(ts, sir_history[:,1], color = red, label = 'Infected')
     ax.plot(ts, sir_history[:,2], color = gray, label = 'Recovered')
+    ax.plot(ts, sir_history.sum(axis = 1), label = 'Total of agents')
+    ax.yaxis.set_major_locator(MaxNLocator(integer=True), )
     ax.legend()
     ax.set_title('SIR History')
-def main():
+    ax.set_ylabel('Agents')
+    ax.set_xlabel('Time')
+    if filename is not None:
+        plt.savefig(filename)
 
-    Lx = 12.0
-    Ly = 8.0
-    R = 0.8 
-    N = 100 #number of agents
-    D = 0.1
-    dt = 0.1
-    T = 20 # total time of simulation
-    lam =0.5 #lambda: infection rate of S inside infectionradius f I 
-    gamma = 0.3 #
-    I0 = 1 #number of infected at start
-    ts, sir_history, n_inf, t_inf, t_rec = simulate(N=N, T=T, dt=dt, R=R,
+def main():
+    
+    N = 400 #number of agents
+    I0 = 4 #number of infected at start
+    R0 =0 #number of recovered at start
+    Lx = 20
+    Ly = 20
+    D = 2
+    r_inf = 1 
+    lam =0.1 #lambda: infection rate of S inside infectionradius f I 
+    gamma = 0.1 # gamma:
+    
+    dt = 0.02
+    T = 80 # total time of simulation
+    
+    
+    #Test with 
+    ts, sir_history, n_inf, t_inf, t_rec = simulate(N=N, T=T, dt=dt, r_inf=r_inf,
                                             lam=lam, gamma=gamma, D=D, 
-                                            Lx=Lx, Ly=Ly, start_I_n=I0)
+                                            Lx=Lx, Ly=Ly, I0=I0, R0=R0)
     plot_sir(sir_history, ts)
     plt.show()
 
