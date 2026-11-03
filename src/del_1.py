@@ -24,20 +24,22 @@ def initial_Q_large_scale(X, Y, Lx, Ly,H = 100, A =1, sigma = 50_000):
     y_c = Ly/4
     
     h0 = A*np.exp(-((X-x_c)**2 + (Y-y_c)**2)/(2*sigma**2)) + H
-    u0 = np.zeros_like(h0)
-    v0 = np.zeros_like(h0)
+    hu0 = np.zeros_like(h0)
+    hv0 = np.zeros_like(h0)
     return np.array([h0, u0, v0])
 
 
-def style_surface(s):
+def style_surface(s, gamma = 0.5):
     """
     Function for custom styles for plots and animation
     of shallow water simulation
+    gamma : bends the color gradient, gamma < 1 gives more color change
+            for low h values (gamma = 1 is a straight gradient)
     """
     # custom colormap: light blue (low h) -> dark blue (high h)
     light = np.array([173, 216, 230])
     dark = np.array([8, 48, 107])
-    t_lut = np.linspace(0, 1, 256)[:, None]
+    t_lut = np.linspace(0, 1, 256)[:, None] ** gamma
     rgb = (1 - t_lut) * light + t_lut * dark
     lut = np.hstack([rgb, 255 * np.ones((256, 1))]).astype(np.uint8)
     s.module_manager.scalar_lut_manager.lut.table = lut
@@ -200,12 +202,10 @@ def lf_step(Q, dt, dx, dy):
     return Qn
 
 def dirichlet_bc(Q):
-    '''Sets the momentum to 0 along the edges and sets egde height equal to 1'''
-    Q[1:, [0, -1], :] = 0        # hu and hv on the left and right edges
-    Q[1:, :, [0, -1]] = 0        # hu and hv on the bottom and top edges
-    
-    Q[0, [0, -1], :] = 1         # setting h to 1 because i cannot be 0
-    Q[0, :, [0, -1]] = 1 
+    '''Sets the momentum and egde height equal to 1'''
+    Q[:, [0, -1], :] = 1        # hu and hv on the left and right edges
+    Q[:, :, [0, -1]] = 1       # hu and hv on the bottom and top edges
+
     return Q
 
 def neumann_bc(Q):
@@ -325,8 +325,6 @@ if __name__ == '__main__':
     T = save_times[-1]
     #ts, hs = lax_f_simulation(Q0, dx, dy, T, save_times = save_times)
 
-    #for i in range(len(ts)):
-    #    plot_instance(X, Y, hs[i], timestamp= ts[i])
     
     # 1c) periodic boundry conditions should maintain total water volume, uncomment to run
     '''
@@ -353,39 +351,39 @@ if __name__ == '__main__':
 
     anim_times = np.linspace(0, 20, 601)
     #animation of shallow water with periodic boundry conditions, uncomment to run
-    """
+    '''
     ts_anim, hs_anim = lax_f_simulation(Q0, dx, dy,anim_times[-1], save_times=anim_times)
     a = s_w_animation(X, Y, ts_anim, hs_anim, delay = 10, frame_dir="figures/animation_SW/frames", warp_scale = 1)
-    mlab.show()
-    """
-
+    #mlab.show()
+    '''
+   
     #animation of shallow water with dirichlet boundry condition, uncomment to run
     '''
     ts_anim, hs_anim = lax_f_simulation(Q0, dx, dy, anim_times[-1], save_times=anim_times, boundry_condition=dirichlet_bc)
-    a = s_w_animation(X, Y, ts_anim, hs_anim, frame_dir="figures/animation_SW/frames", delay= 10, warp_scale = 5)
+    a = s_w_animation(X, Y, ts_anim, hs_anim, frame_dir="figures/animation_SW/frames", delay= 10, warp_scale = 1)
     mlab.show()
     '''
 
     #animation of shallow water with neumann boundry condition, uncomment to run
     '''
     ts_anim, hs_anim = lax_f_simulation(Q0, dx, dy, anim_times[-1], save_times=anim_times, boundry_condition=neumann_bc)
-    a = s_w_animation(X, Y, ts_anim, hs_anim, frame_dir="figures/animation_SW/frames", delay= 10, warp_scale=5, distance=220)
+    a = s_w_animation(X, Y, ts_anim, hs_anim, frame_dir="figures/animation_SW/frames", delay= 10, warp_scale=1, distance = 260)
     mlab.show()
     '''
 
     #animation of shallow water with slip wall boundry condition, uncomment to run
-    """
+    '''
     ts_anim, hs_anim = lax_f_simulation(Q0, dx, dy, anim_times[-1], save_times=anim_times, ghost_cells=slip_cond_bc)
     a = s_w_animation(X, Y, ts_anim, hs_anim, frame_dir="figures/animation_SW/frames", delay= 10, warp_scale=1)
     mlab.show()
-    """
+    '''
 
     #animation of shallow water with no-slip wall boundry condition, uncomment to run
-    """
+
     ts_anim, hs_anim = lax_f_simulation(Q0, dx, dy, anim_times[-1], save_times=anim_times, ghost_cells=slip_cond_bc, no_slip= True)
     a = s_w_animation(X, Y, ts_anim, hs_anim, frame_dir="figures/animation_SW/frames", delay= 10, warp_scale = 1)
     mlab.show()
-    """
+
 
     #animation of quiverplot, uncomment to run
     '''
