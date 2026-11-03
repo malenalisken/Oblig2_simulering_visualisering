@@ -117,7 +117,7 @@ def plot_sir(sir_history, ts, filename = None):
 def main():
     #TODO: find out how to:  kontrollere at  bare de tillatte sykdomsovergangene forekommer
     #       tillatte (gammel, ny)-par: S→S, S→I, I→I, I→R, R→R
-
+    #TODO: deloppgave 2a punkt 4 og 5
     N = 400 #number of agents
     I0 = 4 #number of infected at start
     R0 =0 #number of recovered at start
@@ -136,7 +136,8 @@ def main():
     ts, sir_history, n_inf, t_inf, t_rec = simulate(N=N, T=T, dt=dt, r_inf=r_inf,
                                             lam=lam, gamma=gamma, D=D, 
                                             Lx=Lx, Ly=Ly, I0=I0, R0=R0)
-    plot_sir(sir_history, ts, filename="figures/SIR_hist_with_starting_values.png")
+    #plot_sir(sir_history, ts, filename="figures/SIR_hist_with_starting_values.png")
+    
     plt.show()
 
     
