@@ -16,35 +16,67 @@ def random_positions(n, margin=0.2, Lx = 12.0, Ly = 8.0):
     y = rng.uniform(margin, Ly - margin, n)
     return np.column_stack((x, y))
 
-def reflect(position, L):
+def _reflect(position_coor, L):
+    #position_coor is x og y coordinate
     #if position outside 0 wall, position = -position:
-    position = np.where(position < 0, -position, position) 
-    #if position is outside wall L, position = L - last step
-    position = np.where(position > L , 2*L - position, position)
-    return position
+    position_coor = np.where(position_coor < 0, -position_coor, position_coor) 
+    #if position is outside wall L, position = 2L - position
+    position_coor = np.where(position_coor > L , 2*L - position_coor, position_coor)
+    return position_coor
 
-def update_position(position, dx, N, Lx = 12.0, Ly = 8.0):
-    new = position + dx*rng.standard_normal((N,2))
-    new[:,0] = reflect(new[:,0], Lx)
-    new[:,1] = reflect(new[:,1], Ly)
+def update_position(position, step, N, Lx = 12.0, Ly = 8.0):
+    new = position + step*rng.standard_normal((N,2))
+    new[:,0] = _reflect(new[:,0], Lx)
+    new[:,1] = _reflect(new[:,1], Ly)
     return new
 
 
 def distance(X1, X2):
     return np.sum((X1[:, None, :] - X2[None, :, :])**2, axis=2)
 
-#infection    
+def P_infection(lamda, dt):
+    #infection probability of a pair of agents (S, I)
+    # where S is in infection radius of I
+    return 1 - np.exp(-lamda*dt)
 
-if __name__ == '__main__':
+def P_tot_infection(k, lamda, dt):
+    # gives total probability of infection in S
+    #when S is in radius of k number of I,  
+    return 1 - np.exp(-k*lamda*dt)
+
+def P_recovery(gamma, dt):
+    return 1-np.exp(-gamma*dt)
+
+def initial_state(N, start_I_n=1, margin=0.2, Lx = 12.0, Ly = 8.0):
+    position = random_positions(N, Lx, Ly)
+    state = np.zeros(N, dtype = int) # 0 =S, 1 = I, 2 =R
+    n_infected = np.zeros(N, dtype= int) #number of how many each agent have infected
+    t_infected  = np.full(N, np.nan) #time each agent got infected
+    t_recovered = np.full(N, np.nan) # time each agent recover
+
+    for i in range(start_I_n):
+        state[i] = 1
+        t_infected[i] = 0.0
+
+    return position, state, n_infected, t_infected, t_recovered
+
+
+
+    
+def main():
 
     Lx = 12.0
     Ly = 8.0
     R = 0.8 
-    N = 500
+    N = 10 #number of agents
     D = 0.1
     dt = 0.1
-    dx = np.sqrt(2*D*dt)
-    #postition array
-    pos = random_positions(N)
-    state = np.zeros(N, dtype = int) # 0 =S, 1 = I, 2 =R
-    n_infected = np.zeros(N, dtype= int) #how many each agent have infected
+    T = 20 # total time of simulation
+    step = np.sqrt(2*D*dt) 
+    lamda =0.3 #infection rate of S inside infectionradius f I 
+
+    #initial state 
+    pos, state, n_inf, t_inf, t_rec = initial_state(N)
+
+if __name__ == '__main__':
+    main()
