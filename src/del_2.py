@@ -143,6 +143,30 @@ def plot_sir(sir_history, ts, dt,  filename = None):
     if filename is not None:
         fig.savefig(filename)
 
+def plot_seed_study(ts, sirs, peaks, t_peaks, seeds, dt, filename=None):
+    mean_sir = sirs.mean(axis=0)
+
+    fig, ax = plt.subplots()
+    #plotting each sir: 
+    for i, sir in enumerate(sirs):
+        ax.plot(ts, sir[:, 0], color=blue, alpha=0.3, lw=1,)
+        ax.plot(ts, sir[:, 1], color=red, alpha=0.3, lw=1)
+        ax.plot(ts, sir[:, 2], color=gray, alpha=0.3, lw=1)
+    ax.scatter(t_peaks, peaks, color=red, s=20, zorder=3, label='Peak of each run')
+    #plotting the mean: 
+    ax.plot(ts, mean_sir[:, 0], color=blue, lw=2.5, label='Susceptible (mean)')
+    ax.plot(ts, mean_sir[:, 1], color=red, lw=2.5, label='Infected (mean)')
+    ax.plot(ts, mean_sir[:, 2], color=gray, lw=2.5, label='Recovered (mean)')
+
+    ax.yaxis.set_major_locator(MaxNLocator(integer=True))
+    ax.legend()
+    ax.set_title(f'SIR for {len(seeds)} seeds, thin lines are single runs')
+    ax.set_ylabel('Agents')
+    ax.set_xlabel(f'Time (dt = {dt})')
+    ax.grid(alpha=0.3)
+    if filename is not None:
+        fig.savefig(filename)
+
 def timestep_study(N, T, r_inf, lam, gamma, D, Lx, Ly, I0, R0, dts, seeds):
     for dt in dts:
         peaks, t_peaks, totals = [], [], []
@@ -159,14 +183,37 @@ def timestep_study(N, T, r_inf, lam, gamma, D, Lx, Ly, I0, R0, dts, seeds):
               f"t_peak = {t_peaks.mean():.1f} ± {t_peaks.std():.1f}, "
               f"total infected = {totals.mean():.1f} ± {totals.std():.1f}")
 
+def seed_study(N , T,dt, r_inf, lam, gamma, D, Lx, Ly, I0, R0, seeds):
+    sirs, peaks, t_peaks, totals = [], [], [], []
+    for seed in seeds:
+        ts, sir, *_ = simulate(N=N, T=T, dt=dt, r_inf=r_inf, lam=lam, gamma=gamma,
+                                   D=D, Lx=Lx, Ly=Ly, I0=I0, R0=R0, seed=seed)
+        I = sir[:, 1]
+        sirs.append(sir)
+        peaks.append(I.max())
+        t_peaks.append(ts[I.argmax()])
+        totals.append(N - sir[-1, 0] - R0)
+
+    sirs = np.array(sirs)
+    peaks, t_peaks, totals = np.array(peaks), np.array(t_peaks), np.array(totals)
+     # table of results
+    print(f"{'seed':>6} {'peak I':>8} {'t_peak':>8} {'total':>8}")
+    for seed, p, tp, tot in zip(seeds, peaks, t_peaks, totals):
+        print(f"{seed:>6} {p:>8} {tp:>8.1f} {tot:>8}")
+    print(f"{'mean':>6} {peaks.mean():>8.1f} {t_peaks.mean():>8.1f} {totals.mean():>8.1f}")
+    print(f"{'std':>6} {peaks.std():>8.1f} {t_peaks.std():>8.1f} {totals.std():>8.1f}")
+    print(f"{'min':>6} {peaks.min():>8} {t_peaks.min():>8.1f} {totals.min():>8}")
+    print(f"{'max':>6} {peaks.max():>8} {t_peaks.max():>8.1f} {totals.max():>8}")
+
+    return ts, sirs, peaks, t_peaks
 def main():
     
     #Test with 
     ts, sir_history, *_ = simulate(N=N, T=T, dt=dt, r_inf=r_inf,
                                             lam=lam, gamma=gamma, D=D, 
                                             Lx=Lx, Ly=Ly, I0=I0, R0=R0)
-    plot_sir(sir_history, ts, dt = dt)
-    plt.show() 
+    #plot_sir(sir_history, ts, dt = dt)
+    #plt.show() 
 
     #check boundary cases
     
@@ -182,9 +229,15 @@ def main():
     #undersøke tidssteg
     dts = [dt, dt/2]
     random_seeds = range(10)
-    timestep_study(N, T, r_inf, lam, gamma, D, Lx, Ly, I0, R0, dts=dts, seeds=random_seeds)
+    #timestep_study(N, T, r_inf, lam, gamma, D, Lx, Ly, I0, R0, dts=dts, seeds=random_seeds)
 
+    seeds = range(5)
+    #ts, sirs, peaks, t_peaks = seed_study(N, T, dt, r_inf, lam, gamma, D, Lx, Ly,
+    #                                      I0, R0, seeds=seeds)
+    #plot_seed_study(ts, sirs, peaks, t_peaks, seeds, dt, filename=None)
 
+    #'/figures/seed_study.png'
+    plt.show()
         
 
 
