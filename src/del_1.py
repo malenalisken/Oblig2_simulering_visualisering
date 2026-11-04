@@ -379,11 +379,11 @@ if __name__ == '__main__':
     '''
 
     #animation of shallow water with no-slip wall boundry condition, uncomment to run
-
+    '''
     ts_anim, hs_anim = lax_f_simulation(Q0, dx, dy, anim_times[-1], save_times=anim_times, ghost_cells=slip_cond_bc, no_slip= True)
     a = s_w_animation(X, Y, ts_anim, hs_anim, frame_dir="figures/animation_SW/frames", delay= 10, warp_scale = 1)
     mlab.show()
-
+    '''
 
     #animation of quiverplot, uncomment to run
     '''
