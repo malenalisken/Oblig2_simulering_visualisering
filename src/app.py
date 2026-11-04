@@ -9,7 +9,7 @@ from del_2 import Simulation
 
 pn.extension()
 
-sim = Simulation()
+sim = Simulation(seed = None)
 
 #scatterplot of position of agents
 colors = np.array([blue, red, gray])
@@ -54,12 +54,33 @@ fig2.subplots_adjust(right=0.72) #adjust space for labels
 SIR_hist = pn.pane.Matplotlib(fig2)
 plt.close(fig2)
 
+
+#estimating r eff
+R_T = 5.0     # length of the time window in days
+
+def estimate_R_eff(sim, tau_R = R_T):
+    """Average number infected by agents who recovered during the last R_T days."""
+    recent = (sim.t_rec > sim.t - tau_R) 
+    if not recent.any():
+        return np.nan
+    return sim.n_infected[recent].mean()
+
+
+
 def redraw():
     """Draw the current state of sim in the figure."""
     scat.set_offsets(sim.pos)
     scat.set_color(colors[sim.state])
     ax1.set_title(f"t = {sim.t:.1f} (days)", size=8)
     position_plot.param.trigger("object")
+
+    #updating R_eff for each step
+    R = estimate_R_eff(sim)
+    if np.isnan(R):
+        R_eff_display.object = "<b>R<sub>eff</sub></b> = "
+    else:
+        R_eff_display.object = f"<b>R<sub>eff</sub></b> = {R:.2f}"
+
 
     global stack 
 
@@ -81,6 +102,8 @@ def redraw():
     label_r.set_text(f'Recovered {R:.0f}%')  
 
     SIR_hist.param.trigger("object")
+
+
 
 def update_postion():
     if sim.counts()[1] == 0:            # outbreak over
@@ -109,8 +132,16 @@ legend = pn.pane.HTML(
     f'<span style="color:{red}">●</span> Infected &nbsp;&nbsp; '
     f'<span style="color:{gray}">●</span> Recovered',
     styles={"border": "1px solid #ccc", "padding": "4px 10px", "border-radius": "4px", "font-size": "15px"},
-    align = 'center',
+    align = 'end',
     margin = (0,0,15,0)
+)
+
+R_eff_display = pn.pane.HTML("", styles={"font-size": "16px"}, align = 'start')
+
+legend_and_r_eff = pn.Row(
+    R_eff_display,
+    legend,
+    align = 'center'
 )
 
 start_button = pn.widgets.Button(
@@ -145,27 +176,60 @@ position_plot_buttons = pn.Row(
     align = 'center'
 )
 
-
 position_section = pn.Column(
-    pn.pane.Markdown('### Positions and SIR state for agents over time', align='center'),
+    pn.pane.Markdown('## Positions and SIR state for agents over time', align='center'),
     position_plot,
-    legend,
+    legend_and_r_eff,
     position_plot_buttons,
     align = 'end'
 )
 
+
+
+info_param_values_1 = pn.pane.Markdown(
+    f'''
+    - Agents: N = {sim.N}
+    - Initially infected: I₀ = {sim.I0}
+    - Box: {sim.Lx:.0f} × {sim.Ly:.0f}
+    - Movement: D = {sim.D}
+    - Infection radius: r_inf = {sim.r_inf}
+    - Contact rate: λ = {sim.lam}
+    ''', 
+    width=250
+)
+info_param_values_2 = pn.pane.Markdown(
+    f'''
+    - Recovery rate: γ = {sim.gamma}
+    - Time step: Δt = {sim.dt}
+    - Simulation time: visible on plots, stops when number of infected = 0
+    - R_eff window: τ_R = {R_T:.0f} days
+
+    ''', 
+    width=250,
+)
+info_params = pn.Row(
+    info_param_values_1,
+    info_param_values_2
+)
+info_section = pn.Column(
+    pn.pane.Markdown('## The param values used for this simulation:', align = 'start'),
+    info_params,
+    align = 'start',
+    margin = (0,0,0,40)
+)
+
 histogram_section = pn.Column(
-    pn.pane.Markdown('### Percentage evolution of SIR distribution', align='center', margin=(5, 140, 5, 5)),
+    info_section,
+    pn.pane.Markdown('## Percentage evolution of SIR distribution', align='start', margin = (0,0,0,50)),
     SIR_hist,
     align = 'start'
 )
+
 horisontal_layout = pn.Row(
     histogram_section,
     position_section
 )
 
-
-                
 app = pn.Column(
     '# SIR model simulation',
     horisontal_layout
