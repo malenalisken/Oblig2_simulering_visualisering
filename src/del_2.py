@@ -23,12 +23,13 @@ def P_tot_infection(k, lam, dt):
 def P_recovery(gamma, dt):
     return 1-np.exp(-gamma*dt)
 
-
+def P_vaccination(nu, dt):
+    return 1 - np.exp(-nu*dt)
 class Simulation:
     '''Agent base SIR model'''
 
     def __init__(self, N=400, dt=0.02, r_inf=1.0, lam=0.1, gamma=0.1, D=2.0,
-                 Lx=20.0, Ly=20.0, I0=4, R0=0, seed=42, margin=0.2):
+                 Lx=20.0, Ly=20.0, I0=4, R0=0, t_vac = np.inf, nu = 0.0, seed=42, margin=0.2, ):
         # parameters
         self.N, self.dt, self.r_inf = N, dt, r_inf
         self.lam, self.gamma, self.D = lam, gamma, D
@@ -58,6 +59,11 @@ class Simulation:
         self.t = 0.0
         self.ts = [0.0]                     #all timepoints so far
         self.history = [self.counts()]
+
+        #vaccination
+        self.t_vac = t_vac                #time when vacinations can start, default infinite
+        self.nu = nu
+        self.t_vaccinated = np.full(N, np.nan)            #time of vaccination
 
     def counts(self):
         '''returns [S, I, R] at current point in time'''
@@ -96,6 +102,15 @@ class Simulation:
         self.state[I[new]] = 2
         self.t_rec[I[new]] = self.t
 
+    def _vaccinate(self):
+        if self.t < self.t_vac:
+            return
+        S = np.where(self.state ==0)[0]
+        P = P_vaccination(self.nu, self.dt)
+        new = self.rng.random(len(S)) < P
+        self.state[S[new]] = 2
+        self.t_vaccinated[S[new]] = self.t
+
     def step(self):
         self.n += 1
         self.t = self.n * self.dt
@@ -106,11 +121,12 @@ class Simulation:
         self._infect(I)
         self._recover(I)
 
-        #test for illegar tranformations in state
+        #test for illegar tranformations in state, before vaccinating
         transition = self.state - prev_state
         if np.any((transition > 1) | (transition < 0)):
             raise ValueError(f"Illegal transition at t={self.t:.2f}")
-
+        
+        self._vaccinate() #vaccinate after test
         self.ts.append(self.t)
         self.history.append(self.counts())
 
@@ -118,17 +134,17 @@ class Simulation:
         if sum(self.history[-1]) != self.N:
             raise ValueError(f"Total number of agents is not constant at t={self.t:.2f}")
 
-def simulate(N, T, dt, r_inf, lam, gamma, D, Lx, Ly, I0, R0, seed=42):
+def simulate(N, T, dt, r_inf, lam, gamma, D, Lx, Ly, I0, R0, t_vac=np.inf, nu= 0.0, seed=42):
     '''Instance of an simulation object and running it'''
     sim = Simulation(N=N, dt=dt, r_inf=r_inf, lam=lam, gamma=gamma, D=D,
-                    Lx=Lx, Ly=Ly, I0=I0, R0=R0, seed=seed)
+                    Lx=Lx, Ly=Ly, I0=I0, R0=R0, t_vac= t_vac, nu= nu,seed=seed)
     n_steps = int(round(T / dt))
     for _ in range(n_steps):
         sim.step()
-    return np.array(sim.ts), np.array(sim.history), sim.n_infected, sim.t_inf, sim.t_rec
+    return np.array(sim.ts), np.array(sim.history), sim.n_infected, sim.t_inf, sim.t_rec, sim.t_vaccinated
 
 
-def plot_sir(sir_history, ts, dt,  filename = None):
+def plot_sir(sir_history, ts, dt, filename = None):
     fig, ax = plt.subplots()
     ax.plot(ts, sir_history[:,0],color = blue, label = 'Susceptible')
     ax.plot(ts, sir_history[:,1], color = red, label = 'Infected')
@@ -183,11 +199,46 @@ def timestep_study(N, T, r_inf, lam, gamma, D, Lx, Ly, I0, R0, dts, seeds):
               f"t_peak = {t_peaks.mean():.1f} ± {t_peaks.std():.1f}, "
               f"total infected = {totals.mean():.1f} ± {totals.std():.1f}")
 
-def seed_study(N , T,dt, r_inf, lam, gamma, D, Lx, Ly, I0, R0, seeds):
+def vaccination_study(N, T, dt, r_inf, lam, gamma, D, Lx, Ly, I0, R0, t_vac, nus, seeds):
+    results = {}
+    print(f"t_vac = {t_vac}")
+    print(f'Average of {len(seeds)} simuations')
+    print(f"{'nu':>6} {'peak I':>8} {'t_peak':>8} {'total infected':>15} {'vaccinated':>11}")
+
+    for nu in nus:
+        sirs, peaks, t_peaks, totals, n_vacs = [], [], [], [], []
+        for seed in seeds:
+            ts, sir, n_inf, t_inf, t_rec, t_vaccinated = simulate(N=N, T=T, dt=dt, r_inf=r_inf,
+                                    lam=lam, gamma=gamma, D=D, Lx=Lx, Ly=Ly, I0=I0, R0=R0,
+                                    t_vac=t_vac, nu=nu, seed=seed)
+            I = sir[:, 1]
+            n_vac = np.sum(~np.isnan(t_vaccinated))
+            total = N - sir[-1, 0] - R0 - n_vac      
+
+                # check that vaccinated and infected are kept apart
+            if total != np.sum(~np.isnan(t_inf)):
+                raise ValueError(f"Infected count does not match for nu = {nu}, seed = {seed}")
+
+            sirs.append(sir)
+            peaks.append(I.max())
+            t_peaks.append(ts[I.argmax()])
+            totals.append(total)
+            n_vacs.append(n_vac)
+
+        res = {'sirs': np.array(sirs), 'peaks': np.array(peaks), 't_peaks': np.array(t_peaks),
+               'totals': np.array(totals), 'n_vacs': np.array(n_vacs)}
+        results[nu] = res
+
+        print(f"{nu:>6} {res['peaks'].mean():>8.1f} {res['t_peaks'].mean():>8.1f} "
+      f"{res['totals'].mean():>15.1f} {res['n_vacs'].mean():>11.1f}")
+
+    return ts, results
+
+def seed_study(N , T,dt, r_inf, lam, gamma, D, Lx, Ly, I0, R0, seeds, t_vac = np.inf, nu = 0.0):
     sirs, peaks, t_peaks, totals = [], [], [], []
     for seed in seeds:
         ts, sir, *_ = simulate(N=N, T=T, dt=dt, r_inf=r_inf, lam=lam, gamma=gamma,
-                                   D=D, Lx=Lx, Ly=Ly, I0=I0, R0=R0, seed=seed)
+                                   D=D, Lx=Lx, Ly=Ly, I0=I0, R0=R0, t_vac=t_vac, nu=nu, seed=seed)
         I = sir[:, 1]
         sirs.append(sir)
         peaks.append(I.max())
@@ -206,6 +257,7 @@ def seed_study(N , T,dt, r_inf, lam, gamma, D, Lx, Ly, I0, R0, seeds):
     print(f"{'max':>6} {peaks.max():>8} {t_peaks.max():>8.1f} {totals.max():>8}")
 
     return ts, sirs, peaks, t_peaks
+
 def main():
     
     #Test with 
@@ -220,7 +272,7 @@ def main():
     lam_bc = [0, lam]
     I0_bc = [I0, 0]
     for l, i0 in zip(lam_bc, I0_bc):
-        ts, sir_his, n_inf, t_inf, t_rec = simulate(N=N, T=T, dt=dt, r_inf=r_inf,
+        ts, sir_his, n_inf, t_inf, t_rec, t_vaccinated= simulate(N=N, T=T, dt=dt, r_inf=r_inf,
                                                 lam=l, gamma=gamma, D=D, 
                                                 Lx=Lx, Ly=Ly, I0=i0, R0=R0)
         if ((sir_his[0,0] != sir_his[-1,0]) or (sir_his[-1,2] != R0 + i0) or (sir_his[-1,1] != 0)):
@@ -237,6 +289,9 @@ def main():
     #plot_seed_study(ts, sirs, peaks, t_peaks, seeds, dt, filename=None)
 
     #'/figures/seed_study.png'
+    t_vac = 10
+    nus = nus = [0, 0.01, 0.02, 0.05, 0.1]
+    vaccination_study(N,T,dt,r_inf, lam, gamma, D, Lx, Ly, I0,R0, t_vac =t_vac, nus = nus, seeds = seeds)
     plt.show()
         
 
