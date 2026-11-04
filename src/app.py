@@ -6,50 +6,95 @@ import matplotlib.pyplot as plt
 
 from constants import blue, red, gray
 from del_2 import Simulation
-pn.extension()
 
+pn.extension()
 
 sim = Simulation()
 
+#scatterplot of position of agents
 colors = np.array([blue, red, gray])
 agent_colors = colors[sim.state]
 
-fig, ax = plt.subplots(figsize = (3,3))
-scat = ax.scatter(sim.pos[:,0], sim.pos[:,1], color = agent_colors, s = 8)
-ax.set_ylim(0, sim.Ly)
-ax.set_xlim(0, sim.Lx)
-ax.set_xticks([])     
-ax.set_yticks([])       
-ax.set_aspect('equal')
-ax.set_title(f"t = {sim.t:.1f} (days)", size = 8)
-fig.tight_layout()
+fig1, ax1 = plt.subplots(figsize = (3,3))
+scat = ax1.scatter(sim.pos[:,0], sim.pos[:,1], color = agent_colors, s = 8)
+ax1.set_ylim(0, sim.Ly)
+ax1.set_xlim(0, sim.Lx)
+ax1.set_xticks([])     
+ax1.set_yticks([])       
+ax1.set_aspect('equal')
+ax1.set_title(f"t = {sim.t:.1f} (days)", size = 8)
+fig1.tight_layout()
 
-position_plot = pn.pane.Matplotlib(fig)
-plt.close(fig)
+position_plot = pn.pane.Matplotlib(fig1)
+plt.close(fig1)
+
+
+#historgram of current cases
+fig2, ax2 = plt.subplots(figsize = (5,2))
+pct = 100 * np.array(sim.history)/ sim.N
+
+#colors need to match the order of stacks
+stack = ax2.stackplot(sim.ts, pct[:, 1], pct[:, 0], pct[:, 2], colors=[red, blue, gray]) 
+
+ax2.set_ylim(0, 100)
+ax2.set_xlim(0, max(5,sim.t))
+ax2.tick_params(labelsize=6)
+ax2.set_xlabel('t (days)', size = 7)
+
+label_i = ax2.text(1.02, 0, '', transform=ax2.get_yaxis_transform(),
+                   color=red,  va='center', size=7)
+label_s = ax2.text(1.02, 0, '', transform=ax2.get_yaxis_transform(),
+                   color=blue, va='center', size=7)
+label_r = ax2.text(1.02, 0, '', transform=ax2.get_yaxis_transform(),
+                   color='#000000', va='center', size=7)
+
+fig2.tight_layout()
+fig2.subplots_adjust(right=0.72) #adjust space for labels
+
+SIR_hist = pn.pane.Matplotlib(fig2)
+plt.close(fig2)
 
 def redraw():
     """Draw the current state of sim in the figure."""
     scat.set_offsets(sim.pos)
     scat.set_color(colors[sim.state])
-    ax.set_title(f"t = {sim.t:.1f}", size=8)
+    ax1.set_title(f"t = {sim.t:.1f} (days)", size=8)
     position_plot.param.trigger("object")
 
+    global stack 
+
+    pct = 100 * np.array(sim.history)/ sim.N
+    for area in stack:
+        area.remove()                     # remove the old areas
+    stack = ax2.stackplot(sim.ts, pct[:, 1], pct[:, 0], pct[:, 2],colors=[red, blue, gray])
+    ax2.set_xlim(0, max(5,sim.t))
+
+    # create moving labels for stack
+    S, I, R = pct[-1]                         # current percentages
+
+    label_i.set_y(I / 2)                      # middle of the bottom band
+    label_s.set_y(I + S / 2)                  # middle of the middle band
+    label_r.set_y(I + S + R / 2)              # middle of the top band
+
+    label_i.set_text(f'Infected {I:.0f}%')
+    label_s.set_text(f'Susceptible {S:.0f}%')
+    label_r.set_text(f'Recovered {R:.0f}%')  
+
+    SIR_hist.param.trigger("object")
 
 def update_postion():
     if sim.counts()[1] == 0:            # outbreak over
         callback.stop()
         return
-    sim.step()
+    for i in range(4):
+        sim.step()
     redraw()
-
 
 def start(event):
     callback.start()
 
-
 def pause(event):
     callback.stop()
-
 
 def reset(event):
     global sim
@@ -59,26 +104,29 @@ def reset(event):
 
 callback = pn.state.add_periodic_callback(update_postion, period=50, start = False)
 
-
 legend = pn.pane.HTML(
     f'<span style="color:{blue}">●</span> Susceptible &nbsp;&nbsp; '
     f'<span style="color:{red}">●</span> Infected &nbsp;&nbsp; '
     f'<span style="color:{gray}">●</span> Recovered',
     styles={"border": "1px solid #ccc", "padding": "4px 10px", "border-radius": "4px", "font-size": "15px"},
-    align = 'center'
+    align = 'center',
+    margin = (0,0,15,0)
 )
+
 start_button = pn.widgets.Button(
     name = 'Start',
     button_type = 'success',
     styles = { 'width' : '120px','height': '40px', 'opacity' : '0.8'},
     align = 'start'
 )
+
 pause_button = pn.widgets.Button(
     name = 'Pause',
     button_type = 'primary',
     styles = { 'width' : '120px','height': '40px', 'opacity' : '0.8'},
     align = 'center'
 )
+
 reset_button = pn.widgets.Button(
     name = 'Reset',
     button_type = 'danger',
@@ -97,16 +145,29 @@ position_plot_buttons = pn.Row(
     align = 'center'
 )
 
-plot_with_legend = pn.Column(
+
+position_section = pn.Column(
+    pn.pane.Markdown('### Positions and SIR state for agents over time', align='center'),
     position_plot,
     legend,
-    position_plot_buttons
+    position_plot_buttons,
+    align = 'end'
+)
+
+histogram_section = pn.Column(
+    pn.pane.Markdown('### Percentage evolution of SIR distribution', align='center', margin=(5, 140, 5, 5)),
+    SIR_hist,
+    align = 'start'
+)
+horisontal_layout = pn.Row(
+    histogram_section,
+    position_section
 )
 
 
                 
 app = pn.Column(
     '# SIR model simulation',
-    plot_with_legend
+    horisontal_layout
 )
 app.servable()
