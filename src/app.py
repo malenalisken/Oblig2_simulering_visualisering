@@ -1,7 +1,9 @@
 import panel as pn
+import numpy as np
 import matplotlib.pyplot as plt
-from del_2 import initial_state
-from constants import *
+
+from constants import blue, red, gray
+from del_2 import Simulation
 
 pn.extension()
 
@@ -10,17 +12,21 @@ button = pn.widgets.Button(
     button_type = 'primary'
 )
 
-position, state, *_ = initial_state(N = N, I0=I0, R0 = R0, Lx = Lx, Ly = Ly)
 
-fig, ax = plt.subplot(figsize = (8,8))
-ax.plot(position[:, 0], position[:, 1])
-plot = pn.pane.Matplotlib(fig)
+sim = Simulation()
+
+colors = np.array([blue, red, gray])
+agent_colors = colors[sim.state]
+
+fig, ax = plt.subplots(figsize = (3,3))
+ax.scatter(sim.pos[:,0], sim.pos[:,1], color = agent_colors, s = 0.7)
+
                    
 app = pn.Column(
     '# SIR model simulation',
     'Position of agents',
     'Sum of cases',
-    button, 
-    plot
+    pn.pane.Matplotlib(fig),
+    button
 )
 app.servable()
