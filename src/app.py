@@ -27,18 +27,38 @@ fig.tight_layout()
 position_plot = pn.pane.Matplotlib(fig)
 plt.close(fig)
 
+def redraw():
+    """Draw the current state of sim in the figure."""
+    scat.set_offsets(sim.pos)
+    scat.set_color(colors[sim.state])
+    ax.set_title(f"t = {sim.t:.1f}", size=8)
+    position_plot.param.trigger("object")
+
+
 def update_postion():
-    if sim.counts()[1] == 0:            #when nobody can transition to another state
+    if sim.counts()[1] == 0:            # outbreak over
         callback.stop()
         return
     sim.step()
-    agent_colors = colors[sim.state]
-    scat.set_offsets(sim.pos)
-    scat.set_color(agent_colors)
-    ax.set_title(f"t = {sim.t:.1f} (days)", size = 8)
-    position_plot.param.trigger("object")
+    redraw()
 
-callback = pn.state.add_periodic_callback(update_postion, period=50)
+
+def start(event):
+    callback.start()
+
+
+def pause(event):
+    callback.stop()
+
+
+def reset(event):
+    global sim
+    callback.stop()
+    sim = Simulation(seed=None)         # new random outbreak each time
+    redraw()
+
+callback = pn.state.add_periodic_callback(update_postion, period=50, start = False)
+
 
 legend = pn.pane.HTML(
     f'<span style="color:{blue}">●</span> Susceptible &nbsp;&nbsp; '
@@ -47,20 +67,46 @@ legend = pn.pane.HTML(
     styles={"border": "1px solid #ccc", "padding": "4px 10px", "border-radius": "4px", "font-size": "15px"},
     align = 'center'
 )
+start_button = pn.widgets.Button(
+    name = 'Start',
+    button_type = 'success',
+    styles = { 'width' : '120px','height': '40px', 'opacity' : '0.8'},
+    align = 'start'
+)
+pause_button = pn.widgets.Button(
+    name = 'Pause',
+    button_type = 'primary',
+    styles = { 'width' : '120px','height': '40px', 'opacity' : '0.8'},
+    align = 'center'
+)
+reset_button = pn.widgets.Button(
+    name = 'Reset',
+    button_type = 'danger',
+    styles = { 'width' : '120px','height': '40px', 'opacity' : '0.8'},
+    align = 'end'
+)
+
+start_button.on_click(start)
+pause_button.on_click(pause)
+reset_button.on_click(reset)
+
+position_plot_buttons = pn.Row(
+    start_button,
+    pause_button, 
+    reset_button,
+    align = 'center'
+)
 
 plot_with_legend = pn.Column(
     position_plot,
     legend,
+    position_plot_buttons
 )
 
-button = pn.widgets.Button(
-    name = 'Reset',
-    button_type = 'primary'
-)
+
                 
 app = pn.Column(
     '# SIR model simulation',
-    plot_with_legend,
-    button
+    plot_with_legend
 )
 app.servable()
