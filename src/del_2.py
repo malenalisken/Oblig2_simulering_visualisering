@@ -23,12 +23,13 @@ def P_tot_infection(k, lam, dt):
 def P_recovery(gamma, dt):
     return 1-np.exp(-gamma*dt)
 
-
+def P_vaccination(nu, dt):
+    return 1 - np.exp(-nu*dt)
 class Simulation:
     '''Agent base SIR model'''
 
     def __init__(self, N=400, dt=0.02, r_inf=1.0, lam=0.1, gamma=0.1, D=2.0,
-                 Lx=20.0, Ly=20.0, I0=4, R0=0, seed=42, margin=0.2):
+                 Lx=20.0, Ly=20.0, I0=4, R0=0, t_vac = np.inf, nu = 0.0, seed=42, margin=0.2, ):
         # parameters
         self.N, self.dt, self.r_inf = N, dt, r_inf
         self.lam, self.gamma, self.D = lam, gamma, D
@@ -58,6 +59,12 @@ class Simulation:
         self.t = 0.0
         self.ts = [0.0]                     #all timepoints so far
         self.history = [self.counts()]
+
+        #vaccination
+        self.t_vac = t_vac                #time when vacinations can start, default infinite
+        self.nu = nu
+        self.vaccinated = np.zeros(N,dtype=bool)   #if vaccinated
+        self.t_vac = np.full(N, np.nan)            #time of vaccination
 
     def counts(self):
         '''returns [S, I, R] at current point in time'''
@@ -118,7 +125,7 @@ class Simulation:
         if sum(self.history[-1]) != self.N:
             raise ValueError(f"Total number of agents is not constant at t={self.t:.2f}")
 
-def simulate(N, T, dt, r_inf, lam, gamma, D, Lx, Ly, I0, R0, seed=42):
+def simulate(N, T, dt, r_inf, lam, gamma, D, Lx, Ly, I0, R0, t_vac, nu, seed=42):
     '''Instance of an simulation object and running it'''
     sim = Simulation(N=N, dt=dt, r_inf=r_inf, lam=lam, gamma=gamma, D=D,
                     Lx=Lx, Ly=Ly, I0=I0, R0=R0, seed=seed)
