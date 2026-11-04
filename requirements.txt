@@ -18,3 +18,6 @@ configobj  # used by Mayavi's settings, sometimes not pulled in automatically
 # Saving animations as video (.mp4) – bundles an ffmpeg binary
 imageio>=2.34
 imageio-ffmpeg>=0.5
+
+# Interactive dashboards / widgets
+panel>=1.4
