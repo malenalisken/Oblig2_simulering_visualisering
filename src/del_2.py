@@ -103,6 +103,16 @@ class Simulation:
         self.state[I[new]] = 2
         self.t_rec[I[new]] = self.t
 
+    def _vaccinate(self):
+        if self.t<self.t_vac:
+            return
+        S = np.where(self.state ==0)[0]
+        P = P_vaccination(self.nu, self.dt)
+        new = self.rng.random(len(S)) < P
+        self.state[S[new]] = 2
+        self.vaccinated[S[new]] = True
+        self.t_vaccinated[S[new]] = self.t
+
     def step(self):
         self.n += 1
         self.t = self.n * self.dt
@@ -113,11 +123,12 @@ class Simulation:
         self._infect(I)
         self._recover(I)
 
-        #test for illegar tranformations in state
+        #test for illegar tranformations in state, before vaccinating
         transition = self.state - prev_state
         if np.any((transition > 1) | (transition < 0)):
             raise ValueError(f"Illegal transition at t={self.t:.2f}")
-
+        
+        self.vaccinate() #vaccinate after test
         self.ts.append(self.t)
         self.history.append(self.counts())
 
