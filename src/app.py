@@ -4,14 +4,15 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-from constants import blue, red, gray
 from del_2 import Simulation
+
 
 pn.extension()
 
 sim = Simulation(seed = None)
 
 #scatterplot of position of agents
+blue, red, gray = "#1E4DB7", "#F03224", "#999999"       #SIR order for colors
 colors = np.array([blue, red, gray])
 agent_colors = colors[sim.state]
 

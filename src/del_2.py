@@ -1,9 +1,9 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
-from constants import *
 
-
+#colors
+blue, red, gray = "#1E4DB7", "#F03224", "#999999"       #SIR order for colors
 
 def _reflect(p, L):
     #if p position outside 0 wall, position = -position:

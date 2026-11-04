@@ -4,7 +4,10 @@ import matplotlib.pyplot as plt
 import imageio_ffmpeg
 from matplotlib.animation import FuncAnimation, FFMpegWriter
 import os
+
 plt.rcParams["animation.ffmpeg_path"] = imageio_ffmpeg.get_ffmpeg_exe()
+
+#constants
 g = 9.81
 
 
