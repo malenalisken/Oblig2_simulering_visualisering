@@ -1,43 +1,19 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
+from constants import *
 
 
 
-
-# Colors - same as assignment examples
-blue = "#1E4DB7" #Susceptible
-red = "#F03224" #Infected
-gray = "#999999" #recovered
-
-# position and distance funtions
-
-def random_positions(n,  Lx , Ly, margin=0.2):
-    """Generate n uniformly distributed points inside the box."""
-    x = rng.uniform(margin, Lx - margin, n)
-    y = rng.uniform(margin, Ly - margin, n)
-    return np.column_stack((x, y))
-
-def _reflect(position_coor, L):
-    #position_coor is x og y coordinate
-    #if position outside 0 wall, position = -position:
-    position_coor = np.where(position_coor < 0, -position_coor, position_coor) 
+def _reflect(p, L):
+    #if p position outside 0 wall, position = -position:
+    p = np.where(p < 0, -p, p) 
     #if position is outside wall L, position = 2L - position
-    position_coor = np.where(position_coor > L , 2*L - position_coor, position_coor)
-    return position_coor
-
-def update_position(position, step, N, Lx = 20.0, Ly = 20.0):
-    new = position + step*rng.standard_normal((N,2))
-    new[:,0] = _reflect(new[:,0], Lx)
-    new[:,1] = _reflect(new[:,1], Ly)
-    if ((Lx < np.any(new[:,0] < 0)) or (Ly < np.any(new[:,0] < 0))):
-        raise ValueError('Agent has ventured outside of the box')
-    return new
-
+    p = np.where(p > L , 2*L - p, p)
+    return p
 
 def distance_2(X1, X2):
     return np.sum((X1[:, None, :] - X2[None, :, :])**2, axis=2)
-
 
 def P_tot_infection(k, lam, dt):
     # gives total probability of infection in S
@@ -46,6 +22,76 @@ def P_tot_infection(k, lam, dt):
 
 def P_recovery(gamma, dt):
     return 1-np.exp(-gamma*dt)
+
+
+class Simulation:
+    '''Agent base SIR model'''
+
+    def __init__(self, N=400, dt=0.02, r_inf=1.0, lam=0.1, gamma=0.1, D=2.0,
+                 Lx=20.0, Ly=20.0, I0=4, R0=0, seed=42, margin=0.2):
+        # parameters
+        self.N, self.dt, self.r_inf = N, dt, r_inf
+        self.lam, self.gamma, self.D = lam, gamma, D
+        self.Lx, self.Ly, self.I0, self.R0 = Lx, Ly, I0, R0
+        self.step_size = np.sqrt(2*D*dt)
+
+        # random numb generator
+        self.rng = np.random.default_rng(seed)
+
+        #agents
+        x = self.rng.uniform(margin, Lx - margin, N)
+        y = self.rng.uniform(margin, Ly - margin, N)
+        self.pos = np.column_stack((x, y))
+        self.state = np.zeros(N, dtype=int)             # 0 = S, 1 = I, 2 = R
+        self.n_infected = np.zeros(N, dtype=int)        # how many infected
+        self.t_inf = np.full(N, np.nan)                 # time of infection
+        self.t_rec = np.full(N, np.nan)                 # time of recovery
+
+        #inital distrubution or SIR
+        self.state[:I0] = 1                             
+        self.t_inf[:I0] = 0                             # mark time for initial infected as 0
+        self.state[I0:I0 + R0] = 2                      # if we want to start with some immunities
+        self.t_rec[I0:I0 + R0] = 0.0
+
+        #time and history
+        self.n = 0                          #number of time steps
+        self.t = 0.0
+        self.ts = [0.0]                     #all timepoints so far
+        self.history = [self.counts()]
+
+    def counts(self):
+        '''returns [S, I, R] at current point in time'''
+        return [(self.state == 0).sum(), (self.state == 1).sum(), (self.state == 2).sum()]
+
+    def _move(self):
+        new = self.pos + self.step_size * self.rng.standard_normal((self.N, 2))
+        new[:, 0] = _reflect(new[:, 0], self.Lx)
+        new[:, 1] = _reflect(new[:, 1], self.Ly)
+        # test to check that agents remain in box
+        if np.any(new < 0) or np.any(new[:, 0] > self.Lx) or np.any(new[:, 1] > self.Ly):
+            raise ValueError('Agent has ventured outside of the box')
+        self.pos = new
+        
+def random_positions(n,  Lx , Ly, margin=0.2):
+    """Generate n uniformly distributed points inside the box."""
+    x = rng.uniform(margin, Lx - margin, n)
+    y = rng.uniform(margin, Ly - margin, n)
+    return np.column_stack((x, y))
+
+
+
+def update_position(position, step, N, Lx = 20.0, Ly = 20.0):
+    new = position + step*rng.standard_normal((N,2))
+    new[:,0] = _reflect(new[:,0], Lx)
+    new[:,1] = _reflect(new[:,1], Ly)
+    if np.any(new < 0) or np.any(new[:,0] > Lx) or np.any(new[:,1] > Ly):
+        raise ValueError('Agent has ventured outside of the box')
+    return new
+
+
+
+
+
 
 def initial_state(N, I0, R0, Lx, Ly, margin=0.2):
     position = random_positions(N, Lx=Lx, Ly=Ly,margin=margin,)
@@ -154,20 +200,6 @@ def timestep_study(N, T, r_inf, lam, gamma, D, Lx, Ly, I0, R0, dts, seeds):
               f"total infected = {totals.mean():.1f} ± {totals.std():.1f}")
 
 def main():
-    
-    #TODO: deloppgave 2a punkt 4 og 5
-    N = 400         #number of agents
-    I0 = 4          #number of infected at start
-    R0= 0           #number of recovered at start
-    Lx = Ly = 20
-    D = 2           #movement param
-    r_inf = 1       #infection radius
-    lam =0.1        #lambda: infection rate of S inside infectionradius f I 
-    gamma = 0.1     #gamma: recovery rate
-    
-    dt = 0.02
-    T = 90          #total time of simulation
-    
     
     #Test with 
     ts, sir_history, *_ = simulate(N=N, T=T, dt=dt, r_inf=r_inf,
