@@ -142,7 +142,6 @@ def plot_sir(sir_history, ts, dt,  filename = None):
     ax.grid(alpha = 0.3)
     if filename is not None:
         fig.savefig(filename)
-    return fig,ax                           # so its easy to send to the app
 
 def timestep_study(N, T, r_inf, lam, gamma, D, Lx, Ly, I0, R0, dts, seeds):
     for dt in dts:
@@ -166,7 +165,7 @@ def main():
     ts, sir_history, *_ = simulate(N=N, T=T, dt=dt, r_inf=r_inf,
                                             lam=lam, gamma=gamma, D=D, 
                                             Lx=Lx, Ly=Ly, I0=I0, R0=R0)
-    fig,ax = plot_sir(sir_history, ts, dt = dt)
+    plot_sir(sir_history, ts, dt = dt)
     plt.show() 
 
     #check boundary cases
