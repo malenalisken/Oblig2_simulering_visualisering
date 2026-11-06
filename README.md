@@ -1,7 +1,6 @@
 # Oblig2_simulering_visualisering
 
 ## Setup
-
 This project uses **Python 3.12**
 ```bash
 #Check which version you have in bash. If it fails install python 3.12 from python.org
@@ -15,6 +14,8 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 ## How to run
-
+From the root of the project run:
+```bash
+python src/del_1.py src/del_2.py 
 panel serve app.py --show --dev
-
+```
