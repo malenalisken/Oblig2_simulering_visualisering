@@ -7,7 +7,7 @@ import os
 
 plt.rcParams["animation.ffmpeg_path"] = imageio_ffmpeg.get_ffmpeg_exe()
 
-#constants
+#constant
 g = 9.81
 
 
@@ -29,10 +29,10 @@ def initial_Q_large_scale(X, Y, Lx, Ly,H = 100, A =1, sigma = 50_000):
     h0 = A*np.exp(-((X-x_c)**2 + (Y-y_c)**2)/(2*sigma**2)) + H
     hu0 = np.zeros_like(h0)
     hv0 = np.zeros_like(h0)
-    return np.array([h0, u0, v0])
+    return np.array([h0, hu0, hv0])
 
 
-def style_surface(s, gamma = 0.5):
+def style_surface(s, gamma = 0.7):
     """
     Function for custom styles for plots and animation
     of shallow water simulation
@@ -85,11 +85,10 @@ def s_w_animation(X, Y, ts, hs, delay=50, frame_dir = None, custom_style = True,
                   warp_scale = 1, time_unit= "s", time_scale =1, length_unit = "m", length_scale = 1, 
                   vmin = None,vmax = None, cbar_title="h [m]", label = None):
     """
-    animates water height h
+    animates water height h over time
 
     ts: array of time points,
     hs: array of h-grids, shape (len(ts), Nx, Ny)
-    delay: time between frames in millisecon
     frame_dir : if not none, each frame is saved in frame_dir_folder
     label : text shown in upper left corner (describing boundary cond)
     """
@@ -169,7 +168,6 @@ def quiver_animation(X, Y, ts, us, vs, step =20, interval = 50, filename = None,
     anim = FuncAnimation(fig, update, frames=len(ts), interval=interval)
 
      
-
     if filename is not None:
         anim.save(filename, writer=FFMpegWriter(fps=fps, bitrate=bitrate))
         print(f"Saved {filename}: {os.path.getsize(filename) / 1e6:.1f} MB")
@@ -324,6 +322,7 @@ def main():
     Q0 = initial_Q(X, Y, hD, hS, R)
     
     plot_instance(X, Y, Q0[0], timestamp= 0)
+    mlab.show()
 
     # 1b) simulation of system with suggested initial conditions
 
@@ -340,16 +339,17 @@ def main():
     print('Relative change in volume:', (V - V[0]) / V[0], '\n \n')
     
     # check that finer grid does not improve solution significantly
-
+    
     finer_grid_check(Lx, Ly, hD, hS, R)
-
+    plt.show()
+    
     # constant initial conditions should preserve waterdepth over time
     h0 = np.ones_like(X)
     u0 = np.ones_like(X)
     v0 = np.zeros_like(X)
     Q0 = np.array([h0, u0, v0])
     ts, hs = lax_f_simulation(Q0, dx, dy, T, save_times= save_times)
-    print('The absolute maximum diviation between t0 and T is :', np.max(np.abs(hs[-1] - h0)))
+    print('The absolute maximum diviation of water depth between t0 and T \n for konstant initial conditionsis :', np.max(np.abs(hs[-1] - h0)))
 
 
     # 1d) animations and 1e) animations with different boundry conditions
@@ -362,43 +362,44 @@ def main():
     # animation of shallow water with periodic boundry conditions
     
     ts_anim, hs_anim = lax_f_simulation(Q0, dx, dy,anim_times[-1], save_times=anim_times)
-    periodic_anim = s_w_animation(X, Y, ts_anim, hs_anim, delay = 10, frame_dir="figures/animation_SW/frames", 
-                                  warp_scale = 1, label = 'Periodic boundary conditions' )
+    periodic_anim = s_w_animation(X, Y, ts_anim, hs_anim, delay = 10, warp_scale = 1, 
+                                  label = 'Periodic boundary conditions' )
+    mlab.show()
     
     #animation of shallow water with dirichlet boundry condition
     
     ts_anim, hs_anim = lax_f_simulation(Q0, dx, dy, anim_times[-1], save_times=anim_times, boundry_condition=dirichlet_bc)
-    dirichlet_anim = s_w_animation(X, Y, ts_anim, hs_anim, frame_dir="figures/animation_SW/frames", 
-                                   delay= 10, warp_scale = 1, label = 'Dirichlet boundary conditions')
+    dirichlet_anim = s_w_animation(X, Y, ts_anim, hs_anim, delay= 10, warp_scale = 1, 
+                                   label = 'Dirichlet boundary conditions')
+    mlab.show()
     
-
     #animation of shallow water with neumann boundry condition
     
     ts_anim, hs_anim = lax_f_simulation(Q0, dx, dy, anim_times[-1], save_times=anim_times, boundry_condition=neumann_bc)
-    neumann_anim = s_w_animation(X, Y, ts_anim, hs_anim, frame_dir="figures/animation_SW/frames", 
-                                 delay= 10, warp_scale=1, distance = 260, label = 'Neumann boundary condition')
-   
+    neumann_anim = s_w_animation(X, Y, ts_anim, hs_anim, delay= 10, warp_scale=1, 
+                                 label = 'Neumann boundary condition')
+    mlab.show()
 
     #animation of shallow water with slip wall boundry condition
 
     ts_anim, hs_anim = lax_f_simulation(Q0, dx, dy, anim_times[-1], save_times=anim_times, ghost_cells=slip_cond_bc)
-    slip_anim = s_w_animation(X, Y, ts_anim, hs_anim, frame_dir="figures/animation_SW/frames", 
-                              delay= 10, warp_scale=1, label = 'Slip boundary condition')
-
+    slip_anim = s_w_animation(X, Y, ts_anim, hs_anim, delay= 10, warp_scale=1, 
+                              label = 'Slip boundary condition')
+    mlab.show()
 
     #animation of shallow water with no-slip wall boundry condition
 
     ts_anim, hs_anim = lax_f_simulation(Q0, dx, dy, anim_times[-1], save_times=anim_times, ghost_cells=slip_cond_bc, no_slip= True)
-    no_slip_anim = s_w_animation(X, Y, ts_anim, hs_anim, frame_dir="figures/animation_SW/frames", 
-                                 delay= 10, warp_scale = 1, label = 'No-slip boundary condition')
-    
+    no_slip_anim = s_w_animation(X, Y, ts_anim, hs_anim, delay= 10, warp_scale = 1, 
+                                 label = 'No-slip boundary condition')
+    mlab.show()
 
-    #animation of quiverplot, uncomment to run
+    #animation of quiverplot
 
     quiver_times = np.linspace(0, 20, 201)
     ts_q, hs_q, us_q, vs_q = lax_f_simulation(Q0, dx, dy, anim_times[-1], save_times=quiver_times, return_velocity= True)
     fig_q, a_q = quiver_animation(X, Y, ts_q, us_q, vs_q)
-    
+    plt.show()
     
     # 1 f) simulation on larger scale with new initialfunc and new lenghts
     
@@ -413,10 +414,10 @@ def main():
     anim_times = np.linspace(0, T, 301)
     ts_anim, hs_anim = lax_f_simulation(Q0, dx, dy, anim_times[-1], save_times=anim_times, boundry_condition=neumann_bc)
     eta_anim = hs_anim - H
-    large_scale_anim = s_w_animation(X, Y, ts_anim, eta_anim, delay= 10, frame_dir = None, custom_style=False, colormap="seismic",
+    large_scale_anim = s_w_animation(X, Y, ts_anim, eta_anim, delay= 10, custom_style=False, colormap="seismic",
                        warp_scale =1, time_unit = "h",time_scale=3600, length_unit= "km", length_scale= 1000, 
                        vmin= -0.15, vmax =0.15, cbar_title= "eta[m]", label = 'Large scale animation')
-   
+    mlab.show()
 
     #quiver animation
 
