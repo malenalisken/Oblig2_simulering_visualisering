@@ -1,3 +1,18 @@
+'''
+MAMO3200 Oblig 2 part 1: shallow water equation
+
+Simulates the 2D shallow water equation with Lax-Friedrich scheme, 
+adaptive time step and different boundary conditions
+
+Contents:
+1a) initial condition
+1b) simulate with provided initial values and periodic boundary conditions
+1c) test of volume conservation, effect of grid refinement and constant intial cond
+1d) animation of water height h and quiver plot of velocity with periodic BC
+1e) animation with dirichlet, neumann, slip and no_slip BC
+1f) large scale simulation 
+'''
+
 import numpy as np
 from mayavi import mlab
 import matplotlib.pyplot as plt
@@ -78,7 +93,7 @@ def plot_instance(X, Y, h, timestamp, filename = None):
                  t.property):
         prop.font_family = font
     
-    if filename != None:
+    if filename is not None:
         mlab.savefig(filename)
 
 def s_w_animation(X, Y, ts, hs, delay=50, frame_dir = None, custom_style = True, colormap = "Blues", 
@@ -94,7 +109,7 @@ def s_w_animation(X, Y, ts, hs, delay=50, frame_dir = None, custom_style = True,
     """
 
     #same style settings as 3d plot
-    mlab.figure(bgcolor=(1, 1, 1), fgcolor=(0,0,0), size=(1280, 720))
+    fig = mlab.figure(bgcolor=(1, 1, 1), fgcolor=(0,0,0), size=(1280, 720))
     vmin = hs.min() if vmin is None else vmin
     vmax = hs.max() if vmax is None else vmax
     
@@ -106,7 +121,7 @@ def s_w_animation(X, Y, ts, hs, delay=50, frame_dir = None, custom_style = True,
                    ranges = [X.min()/length_scale, X.max()/length_scale,
                            Y.min()/length_scale, Y.max()/length_scale,
                            hs.min(), hs.max()])
-    ax.axes.y_axis_visibility = False # for some reason mayavi has swapped y and z axis, let stay to remove z axis.
+    ax.axes.y_axis_visibility = False               #hide vertical axis and show hight with colorbar
     ax.axes.label_format = "%.0f"
     ax.axes.corner_offset = 0.05        #so ax labels do not collide
     
@@ -134,7 +149,7 @@ def s_w_animation(X, Y, ts, hs, delay=50, frame_dir = None, custom_style = True,
                 s.mlab_source.scalars = h   # update height, X and Y stay the same
                 title.text = f"t = {t/time_scale:.2f} {time_unit}"
                 if frame_dir is not None and first_loop:
-                    mlab.savefig(os.path.join(frame_dir, f"frame_{i:04d}.png"))
+                    mlab.savefig(os.path.join(frame_dir, f"frame_{i:04d}.png"), figure = fig)
                 yield                       # draw this frame
             first_loop = False              # stops save fig
 
@@ -145,7 +160,7 @@ def quiver_animation(X, Y, ts, us, vs, step =20, interval = 50, filename = None,
     """
     2d quiver animation of velocity u and v
     step : determines wivh nth step vil be plotted with arrow
-    time  between frames
+    interval: how long in ms between new frames
     """
     Xs, Ys= X[::step,::step]/length_scale, Y[::step, ::step]/length_scale
     speeds = np.sqrt(us**2 + vs**2)
@@ -207,8 +222,8 @@ def lf_step(Q, dt, dx, dy):
 
 def dirichlet_bc(Q):
     '''Sets the momentum and egde height equal to 1'''
-    Q[:, [0, -1], :] = 1        # hu and hv on the left and right edges
-    Q[:, :, [0, -1]] = 1       # hu and hv on the bottom and top edges
+    Q[:, [0, -1], :] = 1        # h, hu and hv on the left and right edges
+    Q[:, :, [0, -1]] = 1       # h, hu and hv on the bottom and top edges
 
     return Q
 
@@ -220,7 +235,8 @@ def neumann_bc(Q):
 
 def slip_cond_bc(Q, dt, dx, dy, no_slip = False):
     '''Fictionless wall (slip): ghost cells mirror h, 
-        flipped sign of the normal velocity, tangent vel stays the same
+        flipped sign of the normal velocity, tangent vel stays the same if no_slip false
+        if noslip true the tangent velcoity is also flipped
     '''
     Qp = np.pad(Q, ((0, 0), (1, 1), (1, 1)), mode="edge")       #filling ghost nodes with nearest real values
     Qp[1, [0, -1], :] *= -1
@@ -271,12 +287,12 @@ def lax_f_simulation(Q0, dx, dy, T, save_times,  safety = 0.95, return_velocity 
         dt = min(dt, T-t)            #so it doesnt step past T
         dt = min(dt, save_times[next_save] - t)      #not past wanted timestamp
 
-        if ghost_cells == None:
+        if ghost_cells is None:
             Q = lf_step(Q, dt, dx, dy)
         else: 
             Q = slip_cond_bc(Q, dt, dx, dy, no_slip)
 
-        if boundry_condition != None:
+        if boundry_condition is not None:
             Q = boundry_condition(Q)
         t += dt
 
@@ -297,7 +313,7 @@ def finer_grid_check(Lx, Ly, hD, hS, R):
         dx, dy = [Lx/(N-1), Ly/(N-1)]
         Q0= initial_Q(X, Y, hD, hS, R)
 
-        ts, hs, = lax_f_simulation(Q0, dx, dy, T = 5, save_times= [5])
+        _, hs = lax_f_simulation(Q0, dx, dy, T = 5, save_times= [5])
         h_end = hs[0]
 
         j = np.argmin(np.abs(Y[0, :])) 
@@ -332,7 +348,7 @@ def main():
     ts, hs = lax_f_simulation(Q0, dx, dy, T, save_times = save_times)
     
 
-    # 1c) periodic boundry conditions should maintain total water volume, uncomment to run
+    # 1c) periodic boundry conditions should maintain total water volume
     
     V = np.array([np.sum(h) * dx * dy for h in hs])
     print('Volumn :', V)
@@ -349,12 +365,11 @@ def main():
     v0 = np.zeros_like(X)
     Q0 = np.array([h0, u0, v0])
     ts, hs = lax_f_simulation(Q0, dx, dy, T, save_times= save_times)
-    print('The absolute maximum diviation of water depth between t0 and T \n for konstant initial conditionsis :', np.max(np.abs(hs[-1] - h0)))
+    print('The absolute maximum diviation of water depth between t0 and T \n for constant initial conditions is :', np.max(np.abs(hs[-1] - h0)))
 
 
     # 1d) animations and 1e) animations with different boundry conditions
 
-    X, Y = grid(Lx, Ly, Nx, Ny)
     Q0 = initial_Q(X, Y, hD, hS, R)
 
     anim_times = np.linspace(0, 20, 301)
@@ -397,7 +412,7 @@ def main():
     #animation of quiverplot
 
     quiver_times = np.linspace(0, 20, 201)
-    ts_q, hs_q, us_q, vs_q = lax_f_simulation(Q0, dx, dy, anim_times[-1], save_times=quiver_times, return_velocity= True)
+    ts_q, hs_q, us_q, vs_q = lax_f_simulation(Q0, dx, dy, quiver_times[-1], save_times=quiver_times, return_velocity= True)
     fig_q, a_q = quiver_animation(X, Y, ts_q, us_q, vs_q)
     plt.show()
     
@@ -432,8 +447,4 @@ def main():
 if __name__ == '__main__':
     main()
 
-
-   
-
-    
     
