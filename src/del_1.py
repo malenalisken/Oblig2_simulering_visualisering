@@ -4,6 +4,8 @@ MAMO3200 Oblig 2 part 1: shallow water equation
 Simulates the 2D shallow water equation with Lax-Friedrich scheme, 
 adaptive time step and different boundary conditions
 
+Animations are saved in figures/animation_SW
+
 Contents:
 1a) initial condition
 1b) simulate with provided initial values and periodic boundary conditions

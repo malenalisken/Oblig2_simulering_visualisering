@@ -1,3 +1,20 @@
+'''
+MAMO3200 oblig 2 part 2: SIR model simulation
+
+Simulates N agent moving randomly with reflecting walls in a 20x20 box
+Each agent can enter the state of Suseptible, infected or recovered (or vaccinated in 2g)
+S to I probability for agent within infection radius of k agents : 1 - exp(-*k*lam*dt)
+I to R probability : 1 - exp(-gamma*dt)
+
+2a) implementing agent based simulation with random movement and legal transitions between states
+2b) visualizing the model in a webapp using panel, inspired by three blue one brown video
+    runs in app.py
+2c) testing base models on five differnt seeds
+2g) including possibility of vaccination for the model
+
+'''
+
+
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
@@ -25,6 +42,7 @@ def P_recovery(gamma, dt):
 
 def P_vaccination(nu, dt):
     return 1 - np.exp(-nu*dt)
+
 class Simulation:
     '''Agent base SIR model'''
 
@@ -259,13 +277,25 @@ def seed_study(N , T,dt, r_inf, lam, gamma, D, Lx, Ly, I0, R0, seeds, t_vac = np
     return ts, sirs, peaks, t_peaks
 
 def main():
-    
+    # parameters
+    N = 400         # number of agents
+    I0 = 4          # number of infected at start
+    R0 = 0          # number of recovered at start
+    Lx = Ly = 20    # size of area
+    D = 2           # movement parameter
+    r_inf = 1       # infection radius
+    lam = 0.1       # infection rate inside infection radius
+    gamma = 0.1     # recovery rate
+    T = 90          # total simulation time (days)
+    dt = 0.02       # time step
+    ...
+
     #Test with 
     ts, sir_history, *_ = simulate(N=N, T=T, dt=dt, r_inf=r_inf,
                                             lam=lam, gamma=gamma, D=D, 
                                             Lx=Lx, Ly=Ly, I0=I0, R0=R0)
-    #plot_sir(sir_history, ts, dt = dt)
-    #plt.show() 
+    plot_sir(sir_history, ts, dt = dt)
+    plt.show() 
 
     #check boundary cases
     
@@ -281,12 +311,12 @@ def main():
     #undersøke tidssteg
     dts = [dt, dt/2]
     random_seeds = range(10)
-    #timestep_study(N, T, r_inf, lam, gamma, D, Lx, Ly, I0, R0, dts=dts, seeds=random_seeds)
+    timestep_study(N, T, r_inf, lam, gamma, D, Lx, Ly, I0, R0, dts=dts, seeds=random_seeds)
 
     seeds = range(5)
-    #ts, sirs, peaks, t_peaks = seed_study(N, T, dt, r_inf, lam, gamma, D, Lx, Ly,
-    #                                      I0, R0, seeds=seeds)
-    #plot_seed_study(ts, sirs, peaks, t_peaks, seeds, dt, filename=None)
+    ts, sirs, peaks, t_peaks = seed_study(N, T, dt, r_inf, lam, gamma, D, Lx, Ly,
+                                          I0, R0, seeds=seeds)
+    plot_seed_study(ts, sirs, peaks, t_peaks, seeds, dt, filename=None)
 
     #'/figures/seed_study.png'
     t_vac = 10
